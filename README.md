@@ -1,9 +1,9 @@
-# 📡 API de Monitoramento PEDPEN
+#  API de Monitoramento PEDPEN
 
 API desenvolvida para monitorar os pedidos pendentes de integração, basicamente ela substitui a tabela PEDPEN no novo modelo de integração.
 Fornece endpoints para consulta de status, registro de pedidos e consulta.
 
-## 🛠️ Tecnologias 
+##  Tecnologias 
 
 - Java com Spring
 - Banco de dados: MySQL
