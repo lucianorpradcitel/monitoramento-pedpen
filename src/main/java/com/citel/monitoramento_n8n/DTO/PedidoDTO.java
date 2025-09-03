@@ -6,6 +6,7 @@ public class PedidoDTO {
     private String cliente;
     private String erro;
     private String plataforma;
+    private int status;
 
 
     public String getCodigoPedido() {
@@ -41,6 +42,8 @@ public class PedidoDTO {
     {
         this.plataforma = plataforma;
     }
+
+    public int getStatus() {return status;}
 
 
 }

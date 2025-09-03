@@ -33,10 +33,11 @@ public class PedidoService {
         return repository.findByStatus(0);
     }
 
-    public Optional<Pedido> registraComoIntegrado(String codigoPedido, String cliente) {
+    public Optional<Pedido> registraComoIntegrado(String codigoPedido, String cliente, int status, String erro) {
         return repository.findByCodigoPedidoAndCliente(codigoPedido, cliente)
                 .map(pedido -> {
-                    pedido.setStatus(1);
+                    pedido.setStatus(status);
+                    pedido.setErro(erro);
                     return repository.save(pedido);
                 });
     }

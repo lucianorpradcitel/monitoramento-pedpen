@@ -71,7 +71,7 @@ public class PedidosController {
     @PatchMapping()
     public ResponseEntity<Pedido> atualizarPedido(@RequestBody PedidoDTO request) {
         try{
-            return service.registraComoIntegrado(request.getCodigoPedido(), request.getCliente())
+            return service.registraComoIntegrado(request.getCodigoPedido(), request.getCliente(), request.getStatus(), request.getErro())
                     .map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());
         } catch (Exception e) {
