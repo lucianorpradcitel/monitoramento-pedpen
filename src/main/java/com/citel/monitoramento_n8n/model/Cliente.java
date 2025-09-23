@@ -43,7 +43,7 @@ public class Cliente implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList(); // Usar Collections.emptyList() é mais seguro
+        return Collections.emptyList();  
     }
 
     @Override
