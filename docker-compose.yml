@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  monitoramento-api:
+    build: .
+    container_name: monitoramento-integracoes
+
+    restart: unless-stopped
+
+
+    ports:
+      - "3001:3001"
