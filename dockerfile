@@ -18,7 +18,7 @@ WORKDIR /app
 
 COPY --from=build /app/target/*.jar app.jar
 
-EXPOSE 8080
+EXPOSE 3001
 
 # Comando para iniciar sua API quando o container for executado
 ENTRYPOINT ["java", "-jar", "app.jar"]

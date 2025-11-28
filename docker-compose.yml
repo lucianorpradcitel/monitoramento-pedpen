@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  monitoramento-api:
+    build: .
+    container_name: monitoramento-integracoes
+    restart: unless-stopped
+    # ports:
+    #   - "3001:3001" 
+
+    networks:
+      - network_traefik
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=network_traefik" 
+
+      - "traefik.http.routers.monitoramento-api-router.rule=Host(`monint.citelsoftware.com.br`)"
+      - "traefik.http.routers.monitoramento-api-router.entrypoints=websecure"
+      - "traefik.http.routers.monitoramento-api-router.tls=true"
+      - "traefik.http.routers.monitoramento-api-router.tls.certresolver=tlschallenge"
+
+
+      - "traefik.http.services.monitoramento-api-service.loadbalancer.server.port=3001"
+
+networks:
+  network_traefik:
+    external: true
