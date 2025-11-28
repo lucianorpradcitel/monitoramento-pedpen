@@ -19,13 +19,25 @@ public class PedidoService {
     }
 
     public Pedido registrarPedido(PedidoDTO pedidoComErro) {
-        Pedido pedidoNaoImportado = new Pedido();
-        pedidoNaoImportado.setStatus(0);
-        pedidoNaoImportado.setCodigoPedido(pedidoComErro.getCodigoPedido());
-        pedidoNaoImportado.setErro(pedidoComErro.getErro());
-        pedidoNaoImportado.setCliente(pedidoComErro.getCliente());
-        pedidoNaoImportado.setPlataforma(pedidoComErro.getPlataforma());
-        return repository.save(pedidoNaoImportado);
+
+        Optional<Pedido> pedido = repository.findByCodigoPedidoAndCliente(pedidoComErro.getCodigoPedido(), pedidoComErro.getCliente());
+
+
+        if (pedido.isEmpty())
+        {
+            Pedido pedidoNaoImportado = new Pedido();
+            pedidoNaoImportado.setStatus(0);
+            pedidoNaoImportado.setCodigoPedido(pedidoComErro.getCodigoPedido());
+            pedidoNaoImportado.setErro(pedidoComErro.getErro());
+            pedidoNaoImportado.setCliente(pedidoComErro.getCliente());
+            pedidoNaoImportado.setPlataforma(pedidoComErro.getPlataforma());
+            return repository.save(pedidoNaoImportado);
+        }
+
+        else {
+
+            return pedido.get();
+        }
     }
 
     public List<Pedido> retornarPedidosPendentes() {

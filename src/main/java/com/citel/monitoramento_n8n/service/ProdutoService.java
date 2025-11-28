@@ -20,13 +20,22 @@ public class ProdutoService {
         this.repository = repository;
     }
     public Produto registrarProduto(ProdutoDTO produtoDTO) {
-        Produto novoProduto = new Produto();
-        novoProduto.setStatus(0);
-        novoProduto.setCodigoProduto(produtoDTO.codigoProduto());
-        novoProduto.setErro(produtoDTO.mensagemErro());
-        novoProduto.setCliente(produtoDTO.cliente());
-        novoProduto.setPlataforma(produtoDTO.plataforma());
-        return repository.save(novoProduto);
+
+       Optional<Produto> produtoComErro =  repository.findByCodigoProdutoAndClienteAndMensagemErro(produtoDTO.codigoProduto(), produtoDTO.cliente(), produtoDTO.mensagemErro());
+
+        if (produtoComErro.isEmpty()) {
+
+            Produto novoProduto = new Produto();
+            novoProduto.setStatus(0);
+            novoProduto.setCodigoProduto(produtoDTO.codigoProduto());
+            novoProduto.setErro(produtoDTO.mensagemErro());
+            novoProduto.setCliente(produtoDTO.cliente());
+            novoProduto.setPlataforma(produtoDTO.plataforma());
+            return repository.save(novoProduto);
+        }
+        else {
+            return produtoComErro.get();
+        }
     }
 
 

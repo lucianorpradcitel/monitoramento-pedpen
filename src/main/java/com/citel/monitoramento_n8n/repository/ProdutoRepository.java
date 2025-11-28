@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface ProdutoRepository extends JpaRepository<Produto, String> {
     List<Produto> findByStatus(int status);
     Optional<Produto> findByCodigoProdutoAndCliente(String codigoPedido, String cliente);
+    Optional<Produto> findByCodigoProdutoAndClienteAndMensagemErro(String codigoPedido, String cliente, String mensagemErro);
 }

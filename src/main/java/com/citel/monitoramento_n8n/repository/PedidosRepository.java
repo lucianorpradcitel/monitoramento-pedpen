@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface PedidosRepository extends JpaRepository<Pedido, String> {
     List<Pedido> findByStatus(int status);
     Optional<Pedido> findByCodigoPedidoAndCliente(String codigoPedido, String cliente);
+    
 }
 
 

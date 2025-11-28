@@ -26,7 +26,7 @@ public class Produto {
     @Column(name="PRO_INTEGR")
     private String plataforma;
     @Column(name="PRO_STATUS")
-    private int status; //0 com erro, 1 resolvido
+    private int status;
 
 
     public Produto() {

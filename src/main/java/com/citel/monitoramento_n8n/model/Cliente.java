@@ -2,9 +2,9 @@ package com.citel.monitoramento_n8n.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id; // Import necessário
+import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter; // Opcional, mas útil
+import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -13,7 +13,7 @@ import java.util.Collections;
 
 @Entity
 @Table(name="CADCLI")
-@Getter // Adicionado para não precisar escrever os getters manualmente
+@Getter
 public class Cliente implements UserDetails {
 
     @Id //
