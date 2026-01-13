@@ -44,6 +44,9 @@ public class ProdutoController {
         }
     }
 
+
+
+
     @Operation(summary = "Lista todos os produtos com status 'Erro'",
             description = "Retorna uma lista de todos os produtos que foram registrados com erros e que ainda não foram resolvidos.")
     @ApiResponses(value = {

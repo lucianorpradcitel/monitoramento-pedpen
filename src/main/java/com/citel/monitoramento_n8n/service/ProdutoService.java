@@ -39,6 +39,8 @@ public class ProdutoService {
     }
 
 
+
+
     public List<Produto> retornarProdutosPendentes() {
 
         return repository.findByStatus(0);

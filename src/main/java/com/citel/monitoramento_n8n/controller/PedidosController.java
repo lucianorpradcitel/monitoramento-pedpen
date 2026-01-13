@@ -79,4 +79,16 @@ public class PedidosController {
         }
 
     }
+
+    @DeleteMapping()
+    public void removePedidoDoMonitoramento(@RequestParam String codigoPedido, String codigoCliente)
+    {
+        try
+        {
+            service.removePedidoDoMonitoramento(codigoPedido, codigoCliente);
+        } catch (Exception e) {
+            throw new RuntimeException("Ocorreu um erro ao deletar o pedido do monitoramento" + e);
+        }
+    }
+
 }

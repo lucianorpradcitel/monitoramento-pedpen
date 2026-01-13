@@ -5,7 +5,6 @@ import java.util.Date;
 
 
 public record ProdutoDTO(
-        // Definição com 7 campos e seus tipos
         String id,
         String codigoProduto,
         String mensagemErro,

@@ -1,6 +1,8 @@
 package com.citel.monitoramento_n8n.repository;
 
 import com.citel.monitoramento_n8n.model.Produto;
+import com.citel.monitoramento_n8n.model.ProdutoAtz;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
