@@ -5,7 +5,6 @@ import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.repository.PedidosRepository;
 import org.springframework.stereotype.Service;
 
-import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,7 +31,8 @@ public class PedidoService {
             pedidoNaoImportado.setErro(pedidoComErro.getErro());
             pedidoNaoImportado.setCliente(pedidoComErro.getCliente());
             pedidoNaoImportado.setPlataforma(pedidoComErro.getPlataforma());
-            return repository.save(pedidoNaoImportado);
+            return repository.save(pedidoNaoImportado);          
+
         }
 
         else {

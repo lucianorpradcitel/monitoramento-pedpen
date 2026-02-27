@@ -22,10 +22,6 @@ public class ProdutoAtzService {
 
     public ProdutoAtz registrarAtzProduto(ProdutoAtzDTO produtoAtzDTO) {
 
-        Optional<ProdutoAtz> produtoAtualizado =  repository.findByCoditeAndNomeEmpresa(produtoAtzDTO.codite(), produtoAtzDTO.nomeEmpresa());
-
-        if (produtoAtualizado.isEmpty()) {
-
             ProdutoAtz novoProdutoAtualizado = new ProdutoAtz();
             novoProdutoAtualizado.setNomeEmpresa(produtoAtzDTO.nomeEmpresa());
             novoProdutoAtualizado.setNomePlataforma(produtoAtzDTO.nomePlataforma());
@@ -38,10 +34,7 @@ public class ProdutoAtzService {
             novoProdutoAtualizado.setCodigoResposta(produtoAtzDTO.codigoResposta());
             novoProdutoAtualizado.setTipoEnvio(produtoAtzDTO.tipoEnvio());
             return repository.save(novoProdutoAtualizado);
-        }
-        else {
-            return produtoAtualizado.get();
-        }
+
     }
 
 }
