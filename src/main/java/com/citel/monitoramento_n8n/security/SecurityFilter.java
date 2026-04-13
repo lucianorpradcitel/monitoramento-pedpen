@@ -27,22 +27,24 @@ public class SecurityFilter extends OncePerRequestFilter {
 
         var token = recuperarToken(request);
 
-        if (token != null)
-        {
+        if (token == null) {
+            request.setAttribute("auth_error", "Token de autenticação não informado");
+        } else {
             var subject = tokenService.validarToken(token);
-            if (subject != null)
-            {
+            if (subject == null) {
+                request.setAttribute("auth_error", "Token inválido ou expirado");
+            } else {
                 var cliente = clienteRepository.findByUserName(subject);
-                if(cliente != null)
-                {
+                if (cliente == null) {
+                    request.setAttribute("auth_error", "Usuário não encontrado");
+                } else {
                     var authentication = new UsernamePasswordAuthenticationToken(cliente, null, cliente.getAuthorities());
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-
                 }
             }
         }
 
-        filterChain.doFilter(request,response);
+        filterChain.doFilter(request, response);
 
     }
 
