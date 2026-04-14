@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -33,6 +34,13 @@ public class SecurityConfigurations {
                     req.requestMatchers("/doc**", "/swagger-ui.html", "swagger-ui/**", "/v3/api-docs/**").permitAll();
                     req.anyRequest().authenticated();
                 })
+                .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, e) -> {
+                    String erro = (String) request.getAttribute("auth_error");
+                    if (erro == null) erro = "Não autenticado";
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"erro\": \"" + erro + "\"}");
+                }))
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class).build();
     }
 
