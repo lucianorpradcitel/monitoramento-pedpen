@@ -22,30 +22,50 @@ public class SecurityFilter extends OncePerRequestFilter {
 
     @Autowired
     private ClienteRepository clienteRepository;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+        return (path.equals("/Autenticar") && "POST".equals(method))
+                || (path.equals("/cadastro") && "POST".equals(method))
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/doc");
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
         var token = recuperarToken(request);
 
         if (token == null) {
-            request.setAttribute("auth_error", "Token de autenticação não informado");
-        } else {
-            var subject = tokenService.validarToken(token);
-            if (subject == null) {
-                request.setAttribute("auth_error", "Token inválido ou expirado");
-            } else {
-                var cliente = clienteRepository.findByUserName(subject);
-                if (cliente == null) {
-                    request.setAttribute("auth_error", "Usuário não encontrado");
-                } else {
-                    var authentication = new UsernamePasswordAuthenticationToken(cliente, null, cliente.getAuthorities());
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                }
-            }
+            escreverErro(response, "Token de autenticação não informado");
+            return;
         }
 
-        filterChain.doFilter(request, response);
+        var subject = tokenService.validarToken(token);
+        if (subject == null) {
+            escreverErro(response, "Token inválido ou expirado");
+            return;
+        }
 
+        var cliente = clienteRepository.findByUserName(subject);
+        if (cliente == null) {
+            escreverErro(response, "Usuário não encontrado");
+            return;
+        }
+
+        var authentication = new UsernamePasswordAuthenticationToken(cliente, null, cliente.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        filterChain.doFilter(request, response);
+    }
+
+    private void escreverErro(HttpServletResponse response, String mensagem) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"erro\": \"" + mensagem + "\"}");
     }
 
     private String recuperarToken(HttpServletRequest request)
