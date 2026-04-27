@@ -53,10 +53,12 @@ public class PedidoService {
         log.info("🔍 Buscando pedidos - Cliente: {}, Código: {}, Status: {}",
                 cliente, codigoPedido, status);
 
-        Integer statusInt = converterStatus(status);
+        Integer statusInt = (status != null) ? Integer.parseInt(status) : null;
+
 
         // ✅ ORDEM IMPORTA! Mais específico primeiro (3 filtros)
         if (cliente != null && codigoPedido != null && statusInt != null) {
+
             log.debug("Buscando por: cliente + código + status");
             return repository.findByCodigoPedidoAndClienteAndStatus(codigoPedido, cliente, statusInt);
         }
