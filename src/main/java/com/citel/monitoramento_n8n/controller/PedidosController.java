@@ -51,12 +51,11 @@ public class PedidosController {
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @GetMapping()
-    public ResponseEntity<List<Pedido>> retornarPedidosPendentes() {
-        try{
-            return ResponseEntity.ok(service.retornarPedidosPendentes());
-        } catch (Exception e) {
-            throw new RuntimeException("Ocorreu um erro inesperado ao recuperar a lista dos pedidos que estão pendentes: " + e);
-        }
+    public ResponseEntity<List<Pedido>> retornarPedidosPendentes(
+            @RequestParam(required = false) String cliente,
+            @RequestParam(required = false) String codigoPedido,
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(service.retornarPedidosPendentes(cliente, codigoPedido, status));
     }
 
     @Operation(summary = "Atualiza o status de um pedido para 'Integrado'",
@@ -68,7 +67,7 @@ public class PedidosController {
             @ApiResponse(responseCode = "404", description = "Pedido não encontrado com o código e cliente informados"),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
-    @PatchMapping()
+  /*  @PatchMapping()
     public ResponseEntity<Pedido> atualizarPedido(@RequestBody PedidoDTO request) {
         try{
             return service.registraComoIntegrado(request.getCodigoPedido(), request.getCliente(), request.getStatus(), request.getErro())
@@ -79,6 +78,8 @@ public class PedidosController {
         }
 
     }
+
+   */
 
     @DeleteMapping()
     public void removePedidoDoMonitoramento(@RequestParam String codigoPedido, String codigoCliente)
