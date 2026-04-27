@@ -8,10 +8,10 @@ services:
       - DATABASE_USER=${DATABASE_USER}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - SPRING_DATASOURCE_HIKARI_MAX_LIFETIME=600000
-      - SPRING_WEB_CORS_ALLOWED_ORIGINS=http://129.148.54.123:4200,https://monitoramento-integracoes.citelsoftware.com.br
+      - SPRING_WEB_CORS_ALLOWED_ORIGINS=*
       - SPRING_WEB_CORS_ALLOWED_METHODS=GET,POST,PUT,DELETE,PATCH,OPTIONS
       - SPRING_WEB_CORS_ALLOWED_HEADERS=*
-      - SPRING_WEB_CORS_ALLOW_CREDENTIALS=true
+      - SPRING_WEB_CORS_ALLOW_CREDENTIALS=false
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=network_traefik"
@@ -23,7 +23,6 @@ services:
     networks:
       network_traefik:
         ipv4_address: 172.20.0.10
-
 networks:
   network_traefik:
     external: true
