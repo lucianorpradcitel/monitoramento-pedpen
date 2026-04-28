@@ -25,28 +25,32 @@ public class PedidoService {
     }
 
     public Pedido registrarPedido(PedidoDTO pedidoComErro) {
-        log.info("📝 Registrando novo pedido - Código: {}, Cliente: {}",
+        log.info("📝 Registrando/Atualizando pedido - Código: {}, Cliente: {}",
                 pedidoComErro.getCodigoPedido(), pedidoComErro.getCliente());
 
-        List<Pedido> pedidos = repository.findByCodigoPedidoAndCliente(
-                pedidoComErro.getCodigoPedido(),
-                pedidoComErro.getCliente());
+        Pedido pedido = repository.findByCodigoPedidoAndCliente(
+                        pedidoComErro.getCodigoPedido(),
+                        pedidoComErro.getCliente())
+                .stream()
+                .findFirst()
+                .orElse(new Pedido());
 
-        if (pedidos.isEmpty()) {
-            Pedido pedidoNaoImportado = new Pedido();
-            pedidoNaoImportado.setStatus(pedidoComErro.getStatus());
-            pedidoNaoImportado.setCodigoPedido(pedidoComErro.getCodigoPedido());
-            pedidoNaoImportado.setErro(pedidoComErro.getErro());
-            pedidoNaoImportado.setCliente(pedidoComErro.getCliente());
-            pedidoNaoImportado.setPlataforma(pedidoComErro.getPlataforma());
+        // Atualiza ou seta os valores
+        pedido.setStatus(pedidoComErro.getStatus());
+        pedido.setCodigoPedido(pedidoComErro.getCodigoPedido());
+        pedido.setErro(pedidoComErro.getErro());
+        pedido.setCliente(pedidoComErro.getCliente());
+        pedido.setPlataforma(pedidoComErro.getPlataforma());
 
-            Pedido salvo = repository.save(pedidoNaoImportado);
-            log.info("✅ Pedido registrado com sucesso - ID: {}", salvo.getCodigoPedido());
-            return salvo;
+        Pedido salvo = repository.save(pedido);
+
+        if (pedido.getCodigoPedido() == null) {
+            log.info("✅ Pedido criado - ID: {}", salvo.getCodigoPedido());
         } else {
-            log.info("⚠️  Pedido já existe, retornando o existente");
-            return pedidos.get(0);
+            log.info("🔄 Pedido atualizado - ID: {}", salvo.getCodigoPedido());
         }
+
+        return salvo;
     }
 
     public List<Pedido> retornarPedidosPendentes(String cliente, String codigoPedido, String status) {
