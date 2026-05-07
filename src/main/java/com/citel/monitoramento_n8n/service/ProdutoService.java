@@ -4,11 +4,13 @@ package com.citel.monitoramento_n8n.service;
 import com.citel.monitoramento_n8n.DTO.ProdutoDTO;
 import com.citel.monitoramento_n8n.model.Produto;
 import com.citel.monitoramento_n8n.repository.ProdutoRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class ProdutoService {
 
@@ -41,9 +43,22 @@ public class ProdutoService {
 
 
 
-    public List<Produto> retornarProdutosPendentes() {
+    public List<Produto> retornarProdutosPendentes(String codigoProduto, String cliente) {
+        log.info("🔍 Buscando Produtos - Cliente: {}, Código: {}",
+                cliente, codigoProduto);
 
-        return repository.findByStatus(0);
+        if (codigoProduto == null && cliente == null)
+        {
+            return repository.findByStatus(0);
+        }
+        else if (codigoProduto == null && cliente != null)
+        {
+            return repository.findByCliente(cliente);
+        }
+        else {
+
+            return repository.findByCodigoProdutoAndClienteAndStatus(codigoProduto, cliente, 0);
+        }
     }
     public Optional<Produto> registraComoResolvido(String codigoProduto, String cliente, int status, String erro) {
         return repository.findByCodigoProdutoAndCliente(codigoProduto, cliente)

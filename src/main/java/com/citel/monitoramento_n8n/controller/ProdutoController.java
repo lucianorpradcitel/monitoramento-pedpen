@@ -56,9 +56,12 @@ public class ProdutoController {
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @GetMapping()
-    public ResponseEntity<List<Produto>> retornarProdutosPendentes() {
+    public ResponseEntity<List<Produto>> retornarProdutosPendentes(
+            @RequestParam(required = false) String codigoProduto,
+            @RequestParam(required = false) String cliente
+    ) {
         try{
-            return ResponseEntity.ok(service.retornarProdutosPendentes());
+            return ResponseEntity.ok(service.retornarProdutosPendentes(codigoProduto, cliente));
         } catch (Exception e) {
             throw new RuntimeException("Ocorreu um erro inesperado ao recuperar a lista dos produtos que estão pendentes de atualização: " + e);
         }

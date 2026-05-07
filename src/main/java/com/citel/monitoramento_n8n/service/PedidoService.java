@@ -21,7 +21,7 @@ public class PedidoService {
 
     public Integer converterStatus(String status)
     {
-        return Integer.parseInt(status);
+        return Integer.parseInt(status.replace(",", "."));
     }
 
     public Pedido registrarPedido(PedidoDTO pedidoComErro) {
@@ -57,12 +57,19 @@ public class PedidoService {
         log.info("🔍 Buscando pedidos - Cliente: {}, Código: {}, Status: {}",
                 cliente, codigoPedido, status);
 
-        Integer statusInt = (status != null) ? Integer.parseInt(status) : null;
-
+        // ✅ REMOVE A VÍRGULA e converte para Integer
+        Integer statusInt = null;
+        if (status != null && !status.isEmpty()) {
+            try {
+                statusInt = Integer.parseInt(status.replace(",", "."));
+            } catch (NumberFormatException e) {
+                log.warn("⚠️ Status inválido: {}", status);
+                statusInt = null;
+            }
+        }
 
         // ✅ ORDEM IMPORTA! Mais específico primeiro (3 filtros)
         if (cliente != null && codigoPedido != null && statusInt != null) {
-
             log.debug("Buscando por: cliente + código + status");
             return repository.findByCodigoPedidoAndClienteAndStatus(codigoPedido, cliente, statusInt);
         }
@@ -71,7 +78,7 @@ public class PedidoService {
             log.debug("Buscando por: cliente + código");
             return repository.findByCodigoPedidoAndCliente(codigoPedido, cliente);
         }
-        // ✅ NOVO: código + status (sem cliente) ← AQUI ESTAVA FALTANDO!
+        // ✅ NOVO: código + status (sem cliente)
         else if (codigoPedido != null && statusInt != null) {
             log.debug("Buscando por: código + status");
             return repository.findByCodigoPedidoAndStatus(codigoPedido, statusInt);
@@ -102,7 +109,6 @@ public class PedidoService {
             return repository.findAll();
         }
     }
-
     public void removePedidoDoMonitoramento(String codigoPedido, String cliente) {
         log.info("🗑️  Removendo pedido - Código: {}, Cliente: {}", codigoPedido, cliente);
 
