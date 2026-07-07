@@ -1,12 +1,19 @@
 package com.citel.monitoramento_n8n.service;
 
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
+import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
 import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.repository.PedidosRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.ToIntFunction;
 
 @Service
@@ -25,7 +32,7 @@ public class PedidoService {
     }
 
     public Pedido registrarPedido(PedidoDTO pedidoComErro) {
-        log.info("📝 Registrando/Atualizando pedido - Código: {}, Cliente: {}",
+        log.info(" Registrando/Atualizando pedido - Código: {}, Cliente: {}",
                 pedidoComErro.getCodigoPedido(), pedidoComErro.getCliente());
 
         Pedido pedido = repository.findByCodigoPedidoAndCliente(
@@ -45,45 +52,73 @@ public class PedidoService {
         Pedido salvo = repository.save(pedido);
 
         if (pedido.getCodigoPedido() == null) {
-            log.info("✅ Pedido criado - ID: {}", salvo.getCodigoPedido());
+            log.info(" Pedido criado - ID: {}", salvo.getCodigoPedido());
         } else {
-            log.info("🔄 Pedido atualizado - ID: {}", salvo.getCodigoPedido());
+            log.info(" Pedido atualizado - ID: {}", salvo.getCodigoPedido());
         }
 
         return salvo;
     }
 
-    public List<Pedido> retornarPedidosPendentes(String cliente, String codigoPedido, String status) {
-        log.info("🔍 Buscando pedidos - Cliente: {}, Código: {}, Status: {}",
-                cliente, codigoPedido, status);
 
-        // ✅ REMOVE A VÍRGULA e converte para Integer
+    public List<Pedido> registrarPedidosList(List<PedidoLoteDTO> listaPedidos) {
+        List<Pedido> listaPed = new ArrayList<>();
+
+        for (PedidoLoteDTO dto : listaPedidos) {
+            Optional<Pedido> existente = repository
+                    .findByCodigoPedidoAndCliente(dto.getCodigoPedido(), dto.getCliente())
+                    .stream().findFirst();
+
+            Pedido ped = PedidoLoteDTO.converterDTO(dto, existente.orElseGet(Pedido::new));
+
+            if (existente.isEmpty()) {
+                ped.setStatus(0);   // só define status quando é novo
+            }
+
+            log.info(existente.isPresent() ? "Pedido atualizado - {}" : "Pedido criado - {}",
+                    dto.getCodigoPedido());
+
+            listaPed.add(ped);
+        }
+
+        return repository.saveAll(listaPed);
+    }
+
+    public List<Pedido> retornarPedidosPendentes(String cliente, String codigoPedido, String status, LocalDate data) {
+        log.info(" Buscando pedidos - Cliente: {}, Código: {}, Status: {}, Data {}",
+                cliente, codigoPedido, status, data);
+
         Integer statusInt = null;
         if (status != null && !status.isEmpty()) {
             try {
                 statusInt = Integer.parseInt(status.replace(",", "."));
             } catch (NumberFormatException e) {
-                log.warn("⚠️ Status inválido: {}", status);
+                log.warn("Status inválido: {}", status);
                 statusInt = null;
             }
         }
 
-        // ✅ ORDEM IMPORTA! Mais específico primeiro (3 filtros)
+        //  ORDEM IMPORTA! Mais específico primeiro (3 filtros)
         if (cliente != null && codigoPedido != null && statusInt != null) {
             log.debug("Buscando por: cliente + código + status");
             return repository.findByCodigoPedidoAndClienteAndStatus(codigoPedido, cliente, statusInt);
         }
-        // ✅ NOVO: cliente + código (sem status)
+        else if (cliente != null &&  statusInt != null && data != null)
+        {
+            log.debug("Buscando por: cliente + status + data");
+            return repository.findByClienteAndStatusAndDataPedido(cliente, statusInt, data);
+        }
+        //  cliente + código (sem status)
         else if (cliente != null && codigoPedido != null) {
             log.debug("Buscando por: cliente + código");
             return repository.findByCodigoPedidoAndCliente(codigoPedido, cliente);
         }
-        // ✅ NOVO: código + status (sem cliente)
+        //  código + status (sem cliente)
         else if (codigoPedido != null && statusInt != null) {
             log.debug("Buscando por: código + status");
             return repository.findByCodigoPedidoAndStatus(codigoPedido, statusInt);
         }
-        // ✅ Cliente + Status (sem código)
+        //  Cliente + Status (sem código)
         else if (cliente != null && statusInt != null) {
             log.debug("Buscando por: cliente + status");
             return repository.findByClienteAndStatus(cliente, statusInt);
@@ -110,18 +145,18 @@ public class PedidoService {
         }
     }
     public void removePedidoDoMonitoramento(String codigoPedido, String cliente) {
-        log.info("🗑️  Removendo pedido - Código: {}, Cliente: {}", codigoPedido, cliente);
+        log.info("  Removendo pedido - Código: {}, Cliente: {}", codigoPedido, cliente);
 
         List<Pedido> pedido = repository.findByCodigoPedidoAndCliente(codigoPedido, cliente);
 
         if (pedido.isEmpty()) {
-            log.warn("❌ Pedido não encontrado para remover");
+            log.warn(" Pedido não encontrado para remover");
             throw new RuntimeException("Pedido não encontrado");
         }
 
         Pedido pedidoRemovido = pedido.get(0);
         repository.delete(pedidoRemovido);
 
-        log.info("✅ Pedido removido com sucesso");
+        log.info(" Pedido removido com sucesso");
     }
 }

@@ -1,8 +1,12 @@
 package com.citel.monitoramento_n8n.model;
 
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
+import org.springframework.cglib.core.Local;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.UUID;
 
@@ -23,8 +27,17 @@ public class Pedido {
     private String plataforma;
     @Column(name="PEN_STATUS")
     private int status;
-    @Column(name="PEN_DTAPED", insertable = false, updatable = false)
-    private Date dataPedido;
+    @Column(name="PEN_DTAPED", updatable = false)
+    private LocalDateTime dataPedido;
+    @Column(name="PEN_DHUALT")
+    @Schema(hidden = true)
+    private LocalDateTime ultimaAlteracao;
+    @Column(name="PEN_DTAINS", insertable = false, updatable = false)
+    private LocalDateTime dataInsercao;
+    @Column(name="PEN_SEQPRC")
+    private int sequencialProcessamento;
+
+
 
 
     public Pedido() {
@@ -76,6 +89,15 @@ public class Pedido {
     {
         this.plataforma = plataforma;
     }
+
+    public void setDataPedido(LocalDateTime dataPedido) {this.dataPedido = dataPedido;}
+
+    public void setUltimaAlteracao(LocalDateTime ultimaAlteracao) { this.ultimaAlteracao = ultimaAlteracao;}
+
+    public LocalDateTime getUltimaAlteracao() {return ultimaAlteracao;}
+    public int getSequencialProcessamento() {return sequencialProcessamento;}
+
+    public void setSequencialProcessamento(int sequencialProcessamento) {this.sequencialProcessamento = sequencialProcessamento;}
 
     public int getStatus()
     {

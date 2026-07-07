@@ -1,6 +1,7 @@
 package com.citel.monitoramento_n8n.controller;
 
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
+import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
 import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.service.PedidoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,13 +10,15 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 
 @RestController
-@RequestMapping("/pendentes")
 @Tag(name= "Monitoramento de Pedidos de Integração", description = "Endpoints para gerenciar pedidos pendentes de Integração")
 public class PedidosController {
 
@@ -33,7 +36,7 @@ public class PedidosController {
                             schema = @Schema(implementation = Pedido.class)) }),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
-    @PostMapping
+    @PostMapping("/pendentes")
     public ResponseEntity<Pedido> registrarPedido(@RequestBody PedidoDTO request) {
         try{
             return ResponseEntity.ok(service.registrarPedido(request));
@@ -41,6 +44,15 @@ public class PedidosController {
             throw new RuntimeException("Ocorreu um erro inesperado ao cadastrar este pedido na lista de pedidos pendentes: " + e);
         }
     }
+    @PostMapping("pendentes-lote")
+    public ResponseEntity<List<Pedido>> registrarPedidoList(@RequestBody List<PedidoLoteDTO> request) {
+        try{
+            return ResponseEntity.ok(service.registrarPedidosList(request));
+        } catch (Exception e) {
+            throw new RuntimeException("Ocorreu um erro inesperado ao cadastrar este pedido na lista de pedidos pendentes: " + e);
+        }
+    }
+
 
     @Operation(summary = "Lista todos os pedidos com status 'Pendente'",
             description = "Retorna uma lista de todos os pedidos que foram registrados  e ainda não foram importados.")
@@ -50,12 +62,13 @@ public class PedidosController {
                             schema = @Schema(implementation = Pedido.class)) }),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
-    @GetMapping()
+    @GetMapping("/pendentes")
     public ResponseEntity<List<Pedido>> retornarPedidosPendentes(
             @RequestParam(required = false) String cliente,
             @RequestParam(required = false) String codigoPedido,
-            @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(service.retornarPedidosPendentes(cliente, codigoPedido, status));
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false)  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
+        return ResponseEntity.ok(service.retornarPedidosPendentes(cliente, codigoPedido, status, data ));
     }
 
     @Operation(summary = "Atualiza o status de um pedido para 'Integrado'",
@@ -81,7 +94,7 @@ public class PedidosController {
 
    */
 
-    @DeleteMapping()
+    @DeleteMapping("/pendentes")
     public void removePedidoDoMonitoramento(@RequestParam String codigoPedido, String codigoCliente)
     {
         try

@@ -21,12 +21,15 @@ public class shopifyProductService {
     }
 
     private String padLeft(String value, int length) {
-        if (value == null) {
-            value = "";
+        if (value == null || value.isBlank()) {
+            return null;
         }
-        return String.format("%0" + length + "d", Integer.parseInt(value.replaceAll("[^0-9]", "")));
+        String digits = value.replaceAll("[^0-9]", "");
+        if (digits.isEmpty()) {
+            return null;
+        }
+        return String.format("%0" + length + "d", new java.math.BigInteger(digits));
     }
-
     public void iniciarSincronizacao(shopifySyncProductRequest request) {
         try {
             System.out.println("=== Iniciando sincronização de produtos Shopify ===");
@@ -103,56 +106,61 @@ public class shopifyProductService {
     private String construirQueryComPaginacao(String cursor) {
         if (cursor == null) {
             return """
-                {
-                  products(first: 250) {
-                    edges {
-                      node {
-                        id
-                        title
-                        variants(first: 100) {
-                          nodes {
+                    {
+                      products(first: 250) {
+                        edges {
+                          node {
                             id
-                            sku
                             title
+                            variants(first: 100) {
+                              nodes {
+                                id
+                                sku
+                                title
+                              }
+                            }
                           }
+                        }
+                        pageInfo {
+                          hasNextPage
+                          endCursor
                         }
                       }
                     }
-                    pageInfo {
-                      hasNextPage
-                      endCursor
-                    }
-                  }
-                }
-                """;
+                    """;
         } else {
             return String.format("""
-                {
-                  products(first: 250, after: "%s") {
-                    edges {
-                      node {
-                        id
-                        title
-                        variants(first: 100) {
-                          nodes {
+                    {
+                      products(first: 250, after: "%s") {
+                        edges {
+                          node {
                             id
-                            sku
                             title
+                            variants(first: 100) {
+                              nodes {
+                                id
+                                sku
+                                title
+                              }
+                            }
                           }
+                        }
+                        pageInfo {
+                          hasNextPage
+                          endCursor
                         }
                       }
                     }
-                    pageInfo {
-                      hasNextPage
-                      endCursor
-                    }
-                  }
-                }
-                """, cursor);
+                    """, cursor);
         }
     }
 
     private String executarQueryShopify(String shopifyURL, String apiKey, String query) {
+        String url = shopifyURL;
+        if (url != null && !url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "https://" + url;
+        }
+
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -163,25 +171,31 @@ public class shopifyProductService {
 
             HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
 
-            String url = shopifyURL;
-            if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                url = "https://" + url;
-            }
+            // >>> LOGS DE DIAGNÓSTICO — logo antes do exchange
+            System.out.println(">>> [SHOPIFY] Token recebido? " + (apiKey != null && !apiKey.isBlank()));
+            System.out.println(">>> [SHOPIFY] Token prefix: " +
+                    (apiKey != null && apiKey.length() > 6 ? apiKey.substring(0, 6) : apiKey));
+            System.out.println(">>> [SHOPIFY] Header X-Shopify-Access-Token: "
+                    + entity.getHeaders().getFirst("X-Shopify-Access-Token"));
+            System.out.println(">>> [SHOPIFY] Todos headers: " + entity.getHeaders());
 
             ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    entity,
-                    String.class
-            );
+                    url, HttpMethod.POST, entity, String.class);
+
+            System.out.println(">>> [SHOPIFY] URL: " + url);
+            System.out.println(">>> [SHOPIFY] Status: " + response.getStatusCode());
 
             return response.getBody();
 
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            System.err.println(">>> [SHOPIFY] ERRO " + e.getStatusCode());
+            System.err.println(">>> [SHOPIFY] Body: " + e.getResponseBodyAsString());
+            System.err.println(">>> [SHOPIFY] URL chamada: " + url);
+            throw new RuntimeException("Erro Shopify: " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
             throw new RuntimeException("Erro ao executar query Shopify: " + e.getMessage(), e);
         }
     }
-
     private void sincronizarComErp(List<shopifyProductVariantDTO> variants, String webserviceErp, String tokenErp) {
         System.out.println("\n=== Sincronizando " + variants.size() + " variantes com ERP ===");
 
@@ -204,14 +218,13 @@ public class shopifyProductService {
     }
 
     private void enviarParaErp(shopifyProductVariantDTO variant, String webserviceErp, String tokenErp) {
+        String baseUrl = webserviceErp;
+        if (baseUrl != null && !baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
+            baseUrl = "http://" + baseUrl;
+        }
+        String url = baseUrl + "/V2/mapeamento-produtos";
+
         try {
-            String baseUrl = webserviceErp;
-            if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
-                baseUrl = "http://" + baseUrl;
-            }
-
-            String url = baseUrl + "/V2/mapeamento-produtos";
-
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", tokenErp);
@@ -220,8 +233,11 @@ public class shopifyProductService {
             autcomProductMappingDTO mapping = new autcomProductMappingDTO();
             mapping.setCodigoExterno(variant.getVariantId());
 
-            // Padronizar SKU com 5 dígitos (zeros à esquerda)
-            String skuPadded = String.format("%05d", Integer.parseInt(variant.getSku()));
+            // Padronizar SKU com 5 dígitos (zeros à esquerda) — usa padLeft pra não quebrar com SKU não-numérico/vazio
+            String skuPadded = padLeft(variant.getSku(), 5);
+            if (skuPadded == null) {
+                throw new RuntimeException("SKU inválido ou vazio: '" + variant.getSku() + "'");
+            }
             mapping.setCodigoInterno(skuPadded);
 
             mapping.setCodigoPaiExterno(variant.getProductId());
@@ -231,10 +247,19 @@ public class shopifyProductService {
             List<autcomProductMappingDTO> payload = Collections.singletonList(mapping);
             HttpEntity<List<autcomProductMappingDTO>> entity = new HttpEntity<>(payload, headers);
 
+            System.out.println(">>> [ERP] URL: " + url);
+            System.out.println(">>> [ERP] Authorization presente? " + (tokenErp != null && !tokenErp.isBlank()));
+            System.out.println(">>> [ERP] Payload: " + objectMapper.writeValueAsString(payload));
+
             restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
 
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            System.err.println(">>> [ERP] ERRO " + e.getStatusCode());
+            System.err.println(">>> [ERP] Body: " + e.getResponseBodyAsString());
+            System.err.println(">>> [ERP] URL chamada: " + url);
+            throw new RuntimeException("ERP " + e.getStatusCode() + ": " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
             throw new RuntimeException("Erro ao enviar para ERP: " + e.getMessage(), e);
         }
     }
-    }
+}
