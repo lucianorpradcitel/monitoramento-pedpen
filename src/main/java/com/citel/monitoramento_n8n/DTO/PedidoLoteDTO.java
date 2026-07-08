@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 public class PedidoLoteDTO {
     private String codigoPedido;
     private String cliente;
-    private String erro;
     private String plataforma;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime dataPedido;
@@ -30,16 +29,6 @@ public class PedidoLoteDTO {
     }
     public void setCliente(String cliente) {
         this.cliente = cliente;
-    }
-
-    public String getErro()
-    {
-        return erro;
-    }
-
-    public void setErro(String erro)
-    {
-        this.erro = erro;
     }
 
     public String getPlataforma()
@@ -71,7 +60,6 @@ public class PedidoLoteDTO {
     {
         pd.setCliente(dto.getCliente());
         pd.setCodigoPedido(dto.getCodigoPedido());
-        pd.setErro(dto.getErro());
         pd.setPlataforma(dto.getPlataforma());
         pd.setDataPedido(dto.getDataPedido());
         pd.setUltimaAlteracao(LocalDateTime.now());
