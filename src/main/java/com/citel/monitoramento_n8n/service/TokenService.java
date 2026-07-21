@@ -46,23 +46,19 @@ public class TokenService {
             return token;
 
         } catch (JWTCreationException e) {
-            log.error("❌ Erro ao gerar o token: {}", e.getMessage(), e);
+            log.error("Erro ao gerar o token: {}", e.getMessage(), e);
             throw new RuntimeException("Erro ao gerar o token, tente novamente", e);
         } catch (Exception e) {
-            log.error("❌ Erro inesperado ao gerar token: {}", e.getMessage(), e);
+            log.error("Erro inesperado ao gerar token: {}", e.getMessage(), e);
             throw new RuntimeException("Erro inesperado ao gerar token", e);
         }
     }
 
     public String validarToken(String token) {
         try {
-            log.debug("🔍 Iniciando validação do token");
-            log.debug("Token recebido (primeiros 50 chars): {}",
-                    token != null ? token.substring(0, Math.min(50, token.length())) : "NULL");
-            log.debug("Issuer configurado: {}", issuer);
 
             if (token == null || token.isEmpty()) {
-                log.warn("❌ Token é nulo ou vazio");
+                log.warn("Token é nulo ou vazio");
                 return null;
             }
 
@@ -78,7 +74,7 @@ public class TokenService {
             return subject;
 
         } catch (JWTVerificationException e) {
-            log.warn("❌ Erro de verificação do JWT: {}", e.getMessage());
+            log.warn(" Erro de verificação do JWT: {}", e.getMessage());
             log.warn("Detalhes: {}", e.getClass().getSimpleName());
             return null;
         } catch (IllegalArgumentException e) {

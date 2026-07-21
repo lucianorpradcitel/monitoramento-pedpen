@@ -2,11 +2,8 @@ package com.citel.monitoramento_n8n.controller;
 
 
 import com.citel.monitoramento_n8n.DTO.ProdutoAtzDTO;
-import com.citel.monitoramento_n8n.DTO.ProdutoDTO;
-import com.citel.monitoramento_n8n.model.Produto;
 import com.citel.monitoramento_n8n.model.ProdutoAtz;
 import com.citel.monitoramento_n8n.service.ProdutoAtzService;
-import com.citel.monitoramento_n8n.service.ProdutoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -33,11 +30,7 @@ public class ProdutoAtzController {
 
     @PostMapping
     public ResponseEntity<ProdutoAtz> registrarAtzProduto(@RequestBody ProdutoAtzDTO request) {
-        try{
-            return ResponseEntity.ok(service.registrarAtzProduto(request));
-        } catch (Exception e) {
-            throw new RuntimeException("Ocorreu um erro inesperado ao cadastrar este produto na lista de produtos pendentes: " + e);
-        }
+        return ResponseEntity.ok(service.registrarAtzProduto(request));
     }
 
 }

@@ -27,7 +27,10 @@ public class Produto {
     private String plataforma;
     @Column(name="PRO_STATUS")
     private int status;
-
+    @Column(name="PRO_ID_INT")
+    private String idIntegracao;
+    @Column(name="PRO_ROTINA")
+    private String rotina;
 
     public Produto() {
         this.id = UUID.randomUUID().toString();
@@ -73,10 +76,17 @@ public class Produto {
     }
 
     public String getCliente() {return cliente;}
+    public String getIdIntegracao() {return idIntegracao;}
+
 
     public void setCliente(String cliente) { this.cliente = cliente;}
+    public void setIdIntegracao(String idIntegracao) { this.idIntegracao = idIntegracao; }
 
     public void setDataErro (Date dataErro) {this.dataErro = dataErro;}
 
     public Date getDataErro (){return dataErro;}
+
+    public String getRotina() {return rotina;}
+
+    public void setRotina (String rotina) {this.rotina = rotina;}
 }

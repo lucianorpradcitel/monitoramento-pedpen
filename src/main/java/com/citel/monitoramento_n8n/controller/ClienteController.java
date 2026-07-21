@@ -4,8 +4,6 @@ package com.citel.monitoramento_n8n.controller;
 import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.service.ClienteService;
 import com.citel.monitoramento_n8n.DTO.DadosCriacaoCliente;
-import com.citel.monitoramento_n8n.service.PedidoService;
-import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

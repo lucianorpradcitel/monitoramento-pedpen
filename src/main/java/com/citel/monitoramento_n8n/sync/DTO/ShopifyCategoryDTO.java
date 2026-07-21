@@ -1,6 +1,6 @@
 package com.citel.monitoramento_n8n.sync.DTO;
 
-public class shopifyCategoryDTO {
+public class ShopifyCategoryDTO {
     private String id;
     private String name;
     private String parentId;

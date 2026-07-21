@@ -1,6 +1,5 @@
 package com.citel.monitoramento_n8n.DTO;
 
-import com.citel.monitoramento_n8n.model.Produto;
 import java.util.Date;
 
 
@@ -11,19 +10,8 @@ public record ProdutoDTO(
         Date dataErro,
         String cliente,
         String plataforma,
-        int errStatus
+        int errStatus,
+        String idIntegracao,
+        String rotina
 ) {
-
-
-    public ProdutoDTO(Produto produto) {
-        this(
-                produto.getId(),
-                produto.getCodigoProduto(),
-                produto.getErro(),
-                produto.getDataErro(), //
-                produto.getCliente(),
-                produto.getPlataforma(),
-                produto.getStatus()
-        );
-    }
 }

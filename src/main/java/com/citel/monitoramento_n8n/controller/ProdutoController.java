@@ -3,10 +3,12 @@ package com.citel.monitoramento_n8n.controller;
 
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoDTO;
+import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.model.Produto;
 import com.citel.monitoramento_n8n.service.ProdutoService;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -36,12 +38,9 @@ public class ProdutoController {
     })
 
     @PostMapping
-    public ResponseEntity<Produto> registrarProduto(@RequestBody ProdutoDTO request) {
-        try{
-            return ResponseEntity.ok(service.registrarProduto(request));
-        } catch (Exception e) {
-            throw new RuntimeException("Ocorreu um erro inesperado ao cadastrar este produto na lista de produtos pendentes: " + e);
-        }
+    public ResponseEntity<Produto> registrarProduto(@RequestBody ProdutoDTO request,
+                                                    @AuthenticationPrincipal Cliente cliente) {
+        return ResponseEntity.ok(service.registrarProduto(request, cliente.getIdInt()));
     }
 
 
@@ -58,13 +57,10 @@ public class ProdutoController {
     @GetMapping()
     public ResponseEntity<List<Produto>> retornarProdutosPendentes(
             @RequestParam(required = false) String codigoProduto,
-            @RequestParam(required = false) String cliente
+            @RequestParam(required = false) String cliente,
+            @RequestParam(required = false) String idIntegracao
     ) {
-        try{
-            return ResponseEntity.ok(service.retornarProdutosPendentes(codigoProduto, cliente));
-        } catch (Exception e) {
-            throw new RuntimeException("Ocorreu um erro inesperado ao recuperar a lista dos produtos que estão pendentes de atualização: " + e);
-        }
+        return ResponseEntity.ok(service.retornarProdutosPendentes(codigoProduto, cliente, idIntegracao));
     }
 
     @Operation(summary = "Atualiza o status de um pedido para 'Integrado'",
@@ -78,13 +74,8 @@ public class ProdutoController {
     })
     @PatchMapping()
     public ResponseEntity<Produto> atualizarPedido(@RequestBody ProdutoDTO request) {
-        try{
-            return service.registraComoResolvido(request.codigoProduto(), request.cliente(), request.errStatus(), request.mensagemErro())
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            throw new RuntimeException("Ocorreu um erro inesperado ao atualizar o status deste produto: " + e);
-        }
-
+        return service.registraComoResolvido(request.codigoProduto(), request.cliente(), request.errStatus(), request.mensagemErro())
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

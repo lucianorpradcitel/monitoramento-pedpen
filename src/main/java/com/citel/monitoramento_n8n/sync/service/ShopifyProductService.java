@@ -3,21 +3,23 @@ package com.citel.monitoramento_n8n.sync.service;
 import com.citel.monitoramento_n8n.sync.DTO.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 
+@Slf4j
 @Service
-public class shopifyProductService {
+public class ShopifyProductService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    public shopifyProductService(RestTemplate restTemplate) {
+    public ShopifyProductService(RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
     }
 
     private String padLeft(String value, int length) {
@@ -30,17 +32,17 @@ public class shopifyProductService {
         }
         return String.format("%0" + length + "d", new java.math.BigInteger(digits));
     }
-    public void iniciarSincronizacao(shopifySyncProductRequest request) {
+    public void iniciarSincronizacao(ShopifySyncProductRequest request) {
         try {
-            System.out.println("=== Iniciando sincronização de produtos Shopify ===");
+            log.info("=== Iniciando sincronização de produtos Shopify ===");
 
             // 1. Buscar todos os produtos com paginação
-            List<shopifyProductVariantDTO> variants = buscarTodosProdutos(
+            List<ShopifyProductVariantDTO> variants = buscarTodosProdutos(
                     request.getShopifyURL(),
                     request.getShopifyApiKey()
             );
 
-            System.out.println("Total de variantes encontradas: " + variants.size());
+            log.info("Total de variantes encontradas: {}", variants.size());
 
             // 2. Sincronizar com ERP
             sincronizarComErp(
@@ -49,15 +51,15 @@ public class shopifyProductService {
                     request.getTokenErp()
             );
 
-            System.out.println("=== Sincronização concluída com sucesso! ===");
+            log.info("=== Sincronização concluída com sucesso! ===");
 
         } catch (Exception e) {
             throw new RuntimeException("Erro ao sincronizar produtos: " + e.getMessage(), e);
         }
     }
 
-    private List<shopifyProductVariantDTO> buscarTodosProdutos(String shopifyURL, String apiKey) {
-        List<shopifyProductVariantDTO> allVariants = new ArrayList<>();
+    private List<ShopifyProductVariantDTO> buscarTodosProdutos(String shopifyURL, String apiKey) {
+        List<ShopifyProductVariantDTO> allVariants = new ArrayList<>();
         String cursor = null;
         boolean hasNextPage = true;
 
@@ -77,7 +79,7 @@ public class shopifyProductService {
                     JsonNode variantsNode = productNode.path("variants").path("nodes");
 
                     for (JsonNode variantNode : variantsNode) {
-                        shopifyProductVariantDTO variant = new shopifyProductVariantDTO();
+                        ShopifyProductVariantDTO variant = new ShopifyProductVariantDTO();
                         variant.setProductId(productId);
                         variant.setVariantId(variantNode.path("id").asText());
                         variant.setSku(variantNode.path("sku").asText());
@@ -93,7 +95,7 @@ public class shopifyProductService {
                 hasNextPage = pageInfo.path("hasNextPage").asBoolean(false);
                 cursor = hasNextPage ? pageInfo.path("endCursor").asText() : null;
 
-                System.out.println("Processadas " + allVariants.size() + " variantes...");
+                log.info("Processadas {} variantes...", allVariants.size());
             }
 
         } catch (Exception e) {
@@ -171,53 +173,45 @@ public class shopifyProductService {
 
             HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
 
-            // >>> LOGS DE DIAGNÓSTICO — logo antes do exchange
-            System.out.println(">>> [SHOPIFY] Token recebido? " + (apiKey != null && !apiKey.isBlank()));
-            System.out.println(">>> [SHOPIFY] Token prefix: " +
-                    (apiKey != null && apiKey.length() > 6 ? apiKey.substring(0, 6) : apiKey));
-            System.out.println(">>> [SHOPIFY] Header X-Shopify-Access-Token: "
-                    + entity.getHeaders().getFirst("X-Shopify-Access-Token"));
-            System.out.println(">>> [SHOPIFY] Todos headers: " + entity.getHeaders());
-
             ResponseEntity<String> response = restTemplate.exchange(
                     url, HttpMethod.POST, entity, String.class);
 
-            System.out.println(">>> [SHOPIFY] URL: " + url);
-            System.out.println(">>> [SHOPIFY] Status: " + response.getStatusCode());
+            log.info(">>> [SHOPIFY] URL: {}", url);
+            log.info(">>> [SHOPIFY] Status: {}", response.getStatusCode());
 
             return response.getBody();
 
         } catch (org.springframework.web.client.HttpStatusCodeException e) {
-            System.err.println(">>> [SHOPIFY] ERRO " + e.getStatusCode());
-            System.err.println(">>> [SHOPIFY] Body: " + e.getResponseBodyAsString());
-            System.err.println(">>> [SHOPIFY] URL chamada: " + url);
+            log.error(">>> [SHOPIFY] ERRO {}", e.getStatusCode());
+            log.error(">>> [SHOPIFY] Body: {}", e.getResponseBodyAsString());
+            log.error(">>> [SHOPIFY] URL chamada: {}", url);
             throw new RuntimeException("Erro Shopify: " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
             throw new RuntimeException("Erro ao executar query Shopify: " + e.getMessage(), e);
         }
     }
-    private void sincronizarComErp(List<shopifyProductVariantDTO> variants, String webserviceErp, String tokenErp) {
-        System.out.println("\n=== Sincronizando " + variants.size() + " variantes com ERP ===");
+    private void sincronizarComErp(List<ShopifyProductVariantDTO> variants, String webserviceErp, String tokenErp) {
+        log.info("=== Sincronizando {} variantes com ERP ===", variants.size());
 
         int sucesso = 0;
         int falhas = 0;
 
-        for (shopifyProductVariantDTO variant : variants) {
+        for (ShopifyProductVariantDTO variant : variants) {
             try {
                 enviarParaErp(variant, webserviceErp, tokenErp);
                 sucesso++;
-                System.out.println("[" + sucesso + "/" + variants.size() + "] SKU: " + variant.getSku());
+                log.info("[{}/{}] SKU: {}", sucesso, variants.size(), variant.getSku());
 
             } catch (Exception e) {
                 falhas++;
-                System.err.println("✗ ERRO SKU " + variant.getSku() + ": " + e.getMessage());
+                log.error("✗ ERRO SKU {}: {}", variant.getSku(), e.getMessage());
             }
         }
 
-        System.out.println("\n=== Resumo: " + sucesso + " sucessos, " + falhas + " falhas ===");
+        log.info("=== Resumo: {} sucessos, {} falhas ===", sucesso, falhas);
     }
 
-    private void enviarParaErp(shopifyProductVariantDTO variant, String webserviceErp, String tokenErp) {
+    private void enviarParaErp(ShopifyProductVariantDTO variant, String webserviceErp, String tokenErp) {
         String baseUrl = webserviceErp;
         if (baseUrl != null && !baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
             baseUrl = "http://" + baseUrl;
@@ -230,7 +224,7 @@ public class shopifyProductService {
             headers.set("Authorization", tokenErp);
 
             // Montar objeto conforme esperado pela API
-            autcomProductMappingDTO mapping = new autcomProductMappingDTO();
+            AutcomProductMappingDTO mapping = new AutcomProductMappingDTO();
             mapping.setCodigoExterno(variant.getVariantId());
 
             // Padronizar SKU com 5 dígitos (zeros à esquerda) — usa padLeft pra não quebrar com SKU não-numérico/vazio
@@ -244,19 +238,19 @@ public class shopifyProductService {
             mapping.setCodigoPaiInterno(null);
             mapping.setInformacoesAdicionais(new HashMap<>());
 
-            List<autcomProductMappingDTO> payload = Collections.singletonList(mapping);
-            HttpEntity<List<autcomProductMappingDTO>> entity = new HttpEntity<>(payload, headers);
+            List<AutcomProductMappingDTO> payload = Collections.singletonList(mapping);
+            HttpEntity<List<AutcomProductMappingDTO>> entity = new HttpEntity<>(payload, headers);
 
-            System.out.println(">>> [ERP] URL: " + url);
-            System.out.println(">>> [ERP] Authorization presente? " + (tokenErp != null && !tokenErp.isBlank()));
-            System.out.println(">>> [ERP] Payload: " + objectMapper.writeValueAsString(payload));
+            log.info(">>> [ERP] URL: {}", url);
+            log.info(">>> [ERP] Authorization presente? {}", (tokenErp != null && !tokenErp.isBlank()));
+            log.info(">>> [ERP] Payload: {}", objectMapper.writeValueAsString(payload));
 
             restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
 
         } catch (org.springframework.web.client.HttpStatusCodeException e) {
-            System.err.println(">>> [ERP] ERRO " + e.getStatusCode());
-            System.err.println(">>> [ERP] Body: " + e.getResponseBodyAsString());
-            System.err.println(">>> [ERP] URL chamada: " + url);
+            log.error(">>> [ERP] ERRO {}", e.getStatusCode());
+            log.error(">>> [ERP] Body: {}", e.getResponseBodyAsString());
+            log.error(">>> [ERP] URL chamada: {}", url);
             throw new RuntimeException("ERP " + e.getStatusCode() + ": " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
             throw new RuntimeException("Erro ao enviar para ERP: " + e.getMessage(), e);

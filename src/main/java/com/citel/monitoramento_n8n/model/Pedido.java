@@ -1,13 +1,8 @@
 package com.citel.monitoramento_n8n.model;
 
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
-import org.springframework.cglib.core.Local;
-
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.UUID;
 
 
@@ -36,25 +31,16 @@ public class Pedido {
     private LocalDateTime dataInsercao;
     @Column(name="PEN_SEQPRC")
     private int sequencialProcessamento;
-
-
-
+    @Column(name="PEN_ID_INT")
+    private String idIntegracao;
+    @Column(name="PEN_ROTINA")
+    private String rotina;
 
     public Pedido() {
         this.id = UUID.randomUUID().toString();
 
     }
 
-
-    public void definePedidoComErro (String pedido, String cliente, String erro, String plataforma, int status)
-    {
-        this.codigoPedido = pedido;
-        this.cliente = cliente;
-        this.erro = erro;
-        this.plataforma = plataforma;
-        this.status = status;
-
-    }
 
     public String getCodigoPedido() {
         return codigoPedido;
@@ -108,4 +94,12 @@ public class Pedido {
     {
         this.status = status;
     }
+
+    public String getIdIntegracao() {return idIntegracao;}
+
+    public void setIdIntegracao(String idIntegracao) {this.idIntegracao = idIntegracao;}
+
+    public String getRotina() {return rotina;}
+
+    public void setRotina(String rotina) {this.rotina = rotina;}
 }

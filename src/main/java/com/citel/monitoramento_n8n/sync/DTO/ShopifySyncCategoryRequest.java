@@ -2,7 +2,7 @@ package com.citel.monitoramento_n8n.sync.DTO;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class shopifySyncCategoryRequest {
+public class ShopifySyncCategoryRequest {
 
     @JsonProperty("webserviceErp")
     private String webserviceErp;

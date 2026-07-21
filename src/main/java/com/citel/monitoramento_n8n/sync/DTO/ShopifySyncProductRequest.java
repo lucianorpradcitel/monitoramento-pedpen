@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 
-public class shopifySyncProductRequest {
+public class ShopifySyncProductRequest {
 
     @JsonProperty("webserviceErp")
     private String webserviceErp;

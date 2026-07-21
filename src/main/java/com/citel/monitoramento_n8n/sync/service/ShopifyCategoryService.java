@@ -3,27 +3,28 @@ package com.citel.monitoramento_n8n.sync.service;
 import com.citel.monitoramento_n8n.sync.DTO.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
+@Slf4j
 @Service
-public class shopifyCategoryService {
+public class ShopifyCategoryService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    public shopifyCategoryService(RestTemplate restTemplate) {
+    public ShopifyCategoryService(RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
     }
 
-    public void iniciarSincronizacao(shopifySyncCategoryRequest request) {
+    public void iniciarSincronizacao(ShopifySyncCategoryRequest request) {
         try {
-            System.out.println("=== Iniciando sincronização de categorias Shopify ===");
+            log.info("=== Iniciando sincronização de categorias Shopify ===");
 
             // 1. Buscar categorias raiz com childrenIds
             Map<String, CategoryWithChildren> mapaCompleto = buscarCategoriasComFilhos(
@@ -31,19 +32,19 @@ public class shopifyCategoryService {
                     request.getShopifyApiKey()
             );
 
-            System.out.println("Total de categorias raiz: " + mapaCompleto.size());
+            log.info("Total de categorias raiz: {}", mapaCompleto.size());
 
             // 2. Expandir recursivamente todos os filhos
-            List<shopifyCategoryDTO> todasCategorias = expandirTodasCategorias(
+            List<ShopifyCategoryDTO> todasCategorias = expandirTodasCategorias(
                     mapaCompleto,
                     request.getShopifyURL(),
                     request.getShopifyApiKey()
             );
 
-            System.out.println("Total de categorias após expansão: " + todasCategorias.size());
+            log.info("Total de categorias após expansão: {}", todasCategorias.size());
 
             // 3. Ordenar por hierarquia
-            List<shopifyCategoryDTO> categoriasOrdenadas = ordenarPorHierarquia(todasCategorias);
+            List<ShopifyCategoryDTO> categoriasOrdenadas = ordenarPorHierarquia(todasCategorias);
 
             // 4. Sincronizar com ERP
             sincronizarComErp(
@@ -52,7 +53,7 @@ public class shopifyCategoryService {
                     request.getTokenErp()
             );
 
-            System.out.println("=== Sincronização concluída com sucesso! ===");
+            log.info("=== Sincronização concluída com sucesso! ===");
 
         } catch (Exception e) {
             throw new RuntimeException("Erro ao sincronizar categorias: " + e.getMessage(), e);
@@ -63,10 +64,10 @@ public class shopifyCategoryService {
      * Classe auxiliar para armazenar categoria com seus filhos
      */
     private static class CategoryWithChildren {
-        shopifyCategoryDTO categoria;
+        ShopifyCategoryDTO categoria;
         List<String> childrenIds;
 
-        CategoryWithChildren(shopifyCategoryDTO cat, List<String> children) {
+        CategoryWithChildren(ShopifyCategoryDTO cat, List<String> children) {
             this.categoria = cat;
             this.childrenIds = children;
         }
@@ -92,7 +93,7 @@ public class shopifyCategoryService {
                     JsonNode node = edge.path("node");
 
                     // Criar categoria
-                    shopifyCategoryDTO categoria = new shopifyCategoryDTO();
+                    ShopifyCategoryDTO categoria = new ShopifyCategoryDTO();
                     categoria.setId(node.path("id").asText());
                     categoria.setName(node.path("name").asText());
 
@@ -112,8 +113,7 @@ public class shopifyCategoryService {
 
                     mapa.put(categoria.getId(), new CategoryWithChildren(categoria, childrenIds));
 
-                    System.out.println("Categoria: " + categoria.getName() +
-                            " | Filhos: " + childrenIds.size());
+                    log.info("Categoria: {} | Filhos: {}", categoria.getName(), childrenIds.size());
                 }
 
                 // Verificar próxima página
@@ -132,12 +132,12 @@ public class shopifyCategoryService {
     /**
      * Expande recursivamente todas as subcategorias
      */
-    private List<shopifyCategoryDTO> expandirTodasCategorias(
+    private List<ShopifyCategoryDTO> expandirTodasCategorias(
             Map<String, CategoryWithChildren> mapaInicial,
             String shopifyURL,
             String apiKey) {
 
-        List<shopifyCategoryDTO> todasCategorias = new ArrayList<>();
+        List<ShopifyCategoryDTO> todasCategorias = new ArrayList<>();
         Map<String, CategoryWithChildren> mapaCompleto = new HashMap<>(mapaInicial);
         Set<String> processados = new HashSet<>();
 
@@ -158,7 +158,7 @@ public class shopifyCategoryService {
         int nivel = 1;
         while (!filaIds.isEmpty()) {
             int tamanhoFila = filaIds.size();
-            System.out.println("\n=== Processando nível " + nivel + " (" + tamanhoFila + " categorias) ===");
+            log.info("=== Processando nível {} ({} categorias) ===", nivel, tamanhoFila);
 
             // Processar em lotes de até 50 IDs por vez (limite da API)
             List<String> lote = new ArrayList<>();
@@ -190,8 +190,7 @@ public class shopifyCategoryService {
                     // Adicionar filhos à fila
                     filaIds.addAll(cwc.childrenIds);
 
-                    System.out.println("  → " + cwc.categoria.getName() +
-                            " (filhos: " + cwc.childrenIds.size() + ")");
+                    log.info("  → {} (filhos: {})", cwc.categoria.getName(), cwc.childrenIds.size());
                 }
             }
 
@@ -199,7 +198,7 @@ public class shopifyCategoryService {
 
             // Proteção contra loop infinito
             if (nivel > 300) {
-                System.err.println("AVISO: Limite de 300 níveis atingido. Interrompendo busca.");
+                log.error("AVISO: Limite de 300 níveis atingido. Interrompendo busca.");
                 break;
             }
         }
@@ -229,7 +228,7 @@ public class shopifyCategoryService {
                 JsonNode node = root.path("data").path(nodeKey);
 
                 if (!node.isMissingNode() && !node.isNull()) {
-                    shopifyCategoryDTO categoria = new shopifyCategoryDTO();
+                    ShopifyCategoryDTO categoria = new ShopifyCategoryDTO();
                     categoria.setId(node.path("id").asText());
                     categoria.setName(node.path("name").asText());
 
@@ -252,7 +251,7 @@ public class shopifyCategoryService {
             }
 
         } catch (Exception e) {
-            System.err.println("Erro ao buscar categorias por IDs: " + e.getMessage());
+            log.error("Erro ao buscar categorias por IDs: {}", e.getMessage());
         }
 
         return resultado;
@@ -381,13 +380,10 @@ public class shopifyCategoryService {
         }
     }
 
-    private List<shopifyCategoryDTO> ordenarPorHierarquia(List<shopifyCategoryDTO> categorias) {
-        System.out.println("\n=== Ordenando " + categorias.size() + " categorias por hierarquia ===");
+    private List<ShopifyCategoryDTO> ordenarPorHierarquia(List<ShopifyCategoryDTO> categorias) {
+        log.info("=== Ordenando {} categorias por hierarquia ===", categorias.size());
 
-        List<shopifyCategoryDTO> ordenadas = new ArrayList<>();
-        Map<String, shopifyCategoryDTO> mapaCategoria = categorias.stream()
-                .collect(Collectors.toMap(shopifyCategoryDTO::getId, c -> c));
-
+        List<ShopifyCategoryDTO> ordenadas = new ArrayList<>();
         Set<String> processadas = new HashSet<>();
 
         int nivel = 0;
@@ -396,7 +392,7 @@ public class shopifyCategoryService {
         while (ordenadas.size() < categorias.size() && nivel < 100) {
             int processadasNesteNivel = 0;
 
-            for (shopifyCategoryDTO categoria : categorias) {
+            for (ShopifyCategoryDTO categoria : categorias) {
                 if (processadas.contains(categoria.getId())) {
                     continue;
                 }
@@ -418,13 +414,12 @@ public class shopifyCategoryService {
             if (processadasNesteNivel == 0) {
                 tentativasVazias++;
                 if (tentativasVazias > 3) {
-                    System.err.println("AVISO: " + (categorias.size() - ordenadas.size()) +
-                            " categorias órfãs (pais ausentes)");
+                    log.error("AVISO: {} categorias órfãs (pais ausentes)", categorias.size() - ordenadas.size());
                     break;
                 }
             } else {
                 tentativasVazias = 0;
-                System.out.println("Nível hierárquico " + nivel + ": " + processadasNesteNivel + " categorias");
+                log.info("Nível hierárquico {}: {} categorias", nivel, processadasNesteNivel);
             }
 
             nivel++;
@@ -433,16 +428,16 @@ public class shopifyCategoryService {
         return ordenadas;
     }
 
-    private void sincronizarComErp(List<shopifyCategoryDTO> categorias, String webserviceErp, String tokenErp) {
-        System.out.println("\n=== Sincronizando " + categorias.size() + " categorias com ERP ===");
+    private void sincronizarComErp(List<ShopifyCategoryDTO> categorias, String webserviceErp, String tokenErp) {
+        log.info("=== Sincronizando {} categorias com ERP ===", categorias.size());
 
         Map<String, String> mapeamentoIds = new HashMap<>();
         int sucesso = 0;
         int falhas = 0;
 
-        for (shopifyCategoryDTO catShopify : categorias) {
+        for (ShopifyCategoryDTO catShopify : categorias) {
             try {
-                autcomCategoryDTO catErp = new autcomCategoryDTO();
+                AutcomCategoryDTO catErp = new AutcomCategoryDTO();
                 catErp.setCodigoExterno(catShopify.getId());
                 catErp.setDescricao(catShopify.getName());
 
@@ -452,7 +447,7 @@ public class shopifyCategoryService {
                     if (codigoErpPai != null) {
                         catErp.setCategoriaPai(codigoErpPai);
                     } else {
-                        System.err.println("  ⚠ Pai não encontrado para: " + catShopify.getName());
+                        log.error("  ⚠ Pai não encontrado para: {}", catShopify.getName());
                         catErp.setCategoriaPai(null);
                     }
                 } else {
@@ -460,27 +455,27 @@ public class shopifyCategoryService {
                 }
 
                 // Enviar para ERP
-                autcomCategoryDTO resultado = enviarParaErp(catErp, webserviceErp, tokenErp);
+                AutcomCategoryDTO resultado = enviarParaErp(catErp, webserviceErp, tokenErp);
 
                 if (resultado != null && resultado.getCodigo() != null) {
                     mapeamentoIds.put(catShopify.getId(), resultado.getCodigo());
                     sucesso++;
 
                     String indent = catShopify.getParentId() != null ? "  → " : "";
-                    System.out.println(indent + "[" + sucesso + "/" + categorias.size() + "] " +
-                            catShopify.getName() + " → " + resultado.getCodigo());
+                    log.info("{}[{}/{}] {} → {}", indent, sucesso, categorias.size(),
+                            catShopify.getName(), resultado.getCodigo());
                 }
 
             } catch (Exception e) {
                 falhas++;
-                System.err.println("  ✗ ERRO: " + catShopify.getName() + " - " + e.getMessage());
+                log.error("  ✗ ERRO: {} - {}", catShopify.getName(), e.getMessage());
             }
         }
 
-        System.out.println("\n=== Resumo: " + sucesso + " sucessos, " + falhas + " falhas ===");
+        log.info("=== Resumo: {} sucessos, {} falhas ===", sucesso, falhas);
     }
 
-    private autcomCategoryDTO enviarParaErp(autcomCategoryDTO categoria, String webserviceErp, String tokenErp) {
+    private AutcomCategoryDTO enviarParaErp(AutcomCategoryDTO categoria, String webserviceErp, String tokenErp) {
         try {
             String baseUrl = webserviceErp;
             if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
@@ -493,14 +488,14 @@ public class shopifyCategoryService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", tokenErp);
 
-            List<autcomCategoryDTO> payload = Collections.singletonList(categoria);
-            HttpEntity<List<autcomCategoryDTO>> entity = new HttpEntity<>(payload, headers);
+            List<AutcomCategoryDTO> payload = Collections.singletonList(categoria);
+            HttpEntity<List<AutcomCategoryDTO>> entity = new HttpEntity<>(payload, headers);
 
-            ResponseEntity<autcomCategoryDTO[]> response = restTemplate.exchange(
+            ResponseEntity<AutcomCategoryDTO[]> response = restTemplate.exchange(
                     url,
                     HttpMethod.POST,
                     entity,
-                    autcomCategoryDTO[].class
+                    AutcomCategoryDTO[].class
             );
 
             if (response.getBody() != null && response.getBody().length > 0) {

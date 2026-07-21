@@ -2,9 +2,11 @@ package com.citel.monitoramento_n8n.controller;
 
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
+import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.service.PedidoService;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -13,9 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -37,20 +37,14 @@ public class PedidosController {
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @PostMapping("/pendentes")
-    public ResponseEntity<Pedido> registrarPedido(@RequestBody PedidoDTO request) {
-        try{
-            return ResponseEntity.ok(service.registrarPedido(request));
-        } catch (Exception e) {
-            throw new RuntimeException("Ocorreu um erro inesperado ao cadastrar este pedido na lista de pedidos pendentes: " + e);
-        }
+    public ResponseEntity<Pedido> registrarPedido(@RequestBody PedidoDTO request,
+                                                  @AuthenticationPrincipal Cliente cliente) {
+        return ResponseEntity.ok(service.registrarPedido(request, cliente.getIdInt()));
     }
     @PostMapping("pendentes-lote")
-    public ResponseEntity<List<Pedido>> registrarPedidoList(@RequestBody List<PedidoLoteDTO> request) {
-        try{
-            return ResponseEntity.ok(service.registrarPedidosList(request));
-        } catch (Exception e) {
-            throw new RuntimeException("Ocorreu um erro inesperado ao cadastrar este pedido na lista de pedidos pendentes: " + e);
-        }
+    public ResponseEntity<List<Pedido>> registrarPedidoList(@RequestBody List<PedidoLoteDTO> request,
+                                                            @AuthenticationPrincipal Cliente cliente) {
+        return ResponseEntity.ok(service.registrarPedidosList(request, cliente.getIdInt()));
     }
 
 
@@ -67,42 +61,8 @@ public class PedidosController {
             @RequestParam(required = false) String cliente,
             @RequestParam(required = false) String codigoPedido,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String idIntegracao,
             @RequestParam(required = false)  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
-        return ResponseEntity.ok(service.retornarPedidosPendentes(cliente, codigoPedido, status, data ));
+        return ResponseEntity.ok(service.retornarPedidosPendentes(cliente, codigoPedido, status, idIntegracao, data));
     }
-
-    @Operation(summary = "Atualiza o status de um pedido para 'Integrado'",
-            description = "Busca um pedido pelo código e cliente e, se encontrado, atualiza seu status para 'Integrado'.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Status do Pedido atualizado com sucesso",
-                    content = { @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Pedido.class)) }),
-            @ApiResponse(responseCode = "404", description = "Pedido não encontrado com o código e cliente informados"),
-            @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
-    })
-  /*  @PatchMapping()
-    public ResponseEntity<Pedido> atualizarPedido(@RequestBody PedidoDTO request) {
-        try{
-            return service.registraComoIntegrado(request.getCodigoPedido(), request.getCliente(), request.getStatus(), request.getErro())
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            throw new RuntimeException("Ocorreu um erro inesperado ao atualizar o status deste pedido: " + e);
-        }
-
-    }
-
-   */
-
-    @DeleteMapping("/pendentes")
-    public void removePedidoDoMonitoramento(@RequestParam String codigoPedido, String codigoCliente)
-    {
-        try
-        {
-            service.removePedidoDoMonitoramento(codigoPedido, codigoCliente);
-        } catch (Exception e) {
-            throw new RuntimeException("Ocorreu um erro ao deletar o pedido do monitoramento" + e);
-        }
-    }
-
 }

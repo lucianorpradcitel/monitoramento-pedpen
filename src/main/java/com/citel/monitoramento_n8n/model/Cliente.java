@@ -2,6 +2,8 @@ package com.citel.monitoramento_n8n.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -16,9 +18,10 @@ import java.util.Collections;
 @Getter
 public class Cliente implements UserDetails {
 
-    @Id //
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name="CLI_CODCLI")
-    private String id;
+    private Long id;
 
     @Column(name="CLI_NOMCLI")
     private String nome;
@@ -29,21 +32,20 @@ public class Cliente implements UserDetails {
     @Column(name="CLI_USRNME")
     private String userName;
 
+    @Column(name="CLI_CODAUT")
+    private String idInt;
 
-    public Cliente(String id, String nome,  String userName, String senha)
-    {
-        this.id = id;
+    public Cliente(String nome, String userName, String senha) {
         this.nome = nome;
         this.senha = senha;
         this.userName = userName;
+    }
 
-    };
-
-    public Cliente (){}
+    public Cliente() {}
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList();  
+        return Collections.emptyList();
     }
 
     @Override
@@ -56,12 +58,7 @@ public class Cliente implements UserDetails {
         return this.userName;
     }
 
-    public String getId()
-    {
-        return this.id;
-    }
-
-      @Override
+    @Override
     public boolean isAccountNonExpired() {
         return true;
     }

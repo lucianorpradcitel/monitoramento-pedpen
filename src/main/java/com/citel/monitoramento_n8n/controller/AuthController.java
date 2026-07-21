@@ -1,10 +1,7 @@
 package com.citel.monitoramento_n8n.controller;
 
-
-
 import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.service.TokenService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,14 +22,16 @@ record DadosTokenJWT(String token){}
 @RequestMapping("/Autenticar")
 @Tag(name= "Autenticação JWT", description = "Endpoint para Gerar o JWT")
 public class AuthController {
-    @Autowired
-    private AuthenticationManager manager;
+    private final AuthenticationManager manager;
+    private final TokenService tokenService;
 
-    @Autowired
-    private TokenService tokenService;
+    public AuthController(AuthenticationManager manager, TokenService tokenService) {
+        this.manager = manager;
+        this.tokenService = tokenService;
+    }
 
     @PostMapping()
-    public ResponseEntity fazerLogin(@RequestBody DadosAuth dados)
+    public ResponseEntity<DadosTokenJWT> fazerLogin(@RequestBody DadosAuth dados)
     {
         try
         {
@@ -47,7 +46,7 @@ public class AuthController {
             return ResponseEntity.ok(new DadosTokenJWT(tokenJWT));
 
         } catch (Exception e) {
-            return ResponseEntity.status(401).body("Falha na autenticação" + e.getMessage());
+            return ResponseEntity.status(401).build();
         }
     }
 }

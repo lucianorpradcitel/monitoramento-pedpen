@@ -1,11 +1,8 @@
 package com.citel.monitoramento_n8n.repository;
 
-
-import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.model.PontuacaoPendente;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
 

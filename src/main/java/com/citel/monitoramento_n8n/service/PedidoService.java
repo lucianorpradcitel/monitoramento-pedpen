@@ -5,16 +5,13 @@ import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
 import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.repository.PedidosRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.ToIntFunction;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -26,14 +23,7 @@ public class PedidoService {
         this.repository = repository;
     }
 
-    public Integer converterStatus(String status)
-    {
-        return Integer.parseInt(status.replace(",", "."));
-    }
-
-    public Pedido registrarPedido(PedidoDTO pedidoComErro) {
-        log.info(" Registrando/Atualizando pedido - Código: {}, Cliente: {}",
-                pedidoComErro.getCodigoPedido(), pedidoComErro.getCliente());
+    public Pedido registrarPedido(PedidoDTO pedidoComErro, String idInt) {
 
         Pedido pedido = repository.findByCodigoPedidoAndCliente(
                         pedidoComErro.getCodigoPedido(),
@@ -48,115 +38,65 @@ public class PedidoService {
         pedido.setErro(pedidoComErro.getErro());
         pedido.setCliente(pedidoComErro.getCliente());
         pedido.setPlataforma(pedidoComErro.getPlataforma());
+        pedido.setIdIntegracao(idInt);// vem do cliente autenticado (CADCLI.CLI_CODAUT)
+        pedido.setRotina(pedidoComErro.getRotina());
 
-        Pedido salvo = repository.save(pedido);
-
-        if (pedido.getCodigoPedido() == null) {
-            log.info(" Pedido criado - ID: {}", salvo.getCodigoPedido());
-        } else {
-            log.info(" Pedido atualizado - ID: {}", salvo.getCodigoPedido());
-        }
-
-        return salvo;
+        return repository.save(pedido);
     }
 
+    public List<Pedido> registrarPedidosList(List<PedidoLoteDTO> listaPedidos, String idInt) {
+        List<String> clientes = listaPedidos.stream()
+                .map(PedidoLoteDTO::getCliente).distinct().toList();
+        List<String> codigos = listaPedidos.stream()
+                .map(PedidoLoteDTO::getCodigoPedido).distinct().toList();
 
-    public List<Pedido> registrarPedidosList(List<PedidoLoteDTO> listaPedidos) {
+        // Busca todos os existentes numa única query (evita N+1) e indexa por cliente|codigoPedido
+        Map<String, Pedido> existentesPorChave = repository
+                .findByClienteInAndCodigoPedidoIn(clientes, codigos)
+                .stream()
+                .collect(Collectors.toMap(
+                        p -> chave(p.getCliente(), p.getCodigoPedido()),
+                        p -> p,
+                        (a, b) -> a));
+
         List<Pedido> listaPed = new ArrayList<>();
-
         for (PedidoLoteDTO dto : listaPedidos) {
-            Optional<Pedido> existente = repository
-                    .findByCodigoPedidoAndCliente(dto.getCodigoPedido(), dto.getCliente())
-                    .stream().findFirst();
+            Pedido existente = existentesPorChave.get(chave(dto.getCliente(), dto.getCodigoPedido()));
+            boolean novo = existente == null;
 
-            Pedido ped = PedidoLoteDTO.converterDTO(dto, existente.orElseGet(Pedido::new));
-
-            if (existente.isEmpty()) {
+            Pedido ped = PedidoLoteDTO.converterDTO(dto, novo ? new Pedido() : existente);
+            if (novo) {
                 ped.setStatus(0);   // só define status quando é novo
             }
+            ped.setIdIntegracao(idInt);   // vem do cliente autenticado (CADCLI.CLI_CODAUT)
 
-            log.info(existente.isPresent() ? "Pedido atualizado - {}" : "Pedido criado - {}",
-                    dto.getCodigoPedido());
-
+            log.info(novo ? "Pedido criado - {}" : "Pedido atualizado - {}", dto.getCodigoPedido());
             listaPed.add(ped);
         }
 
         return repository.saveAll(listaPed);
     }
 
-    public List<Pedido> retornarPedidosPendentes(String cliente, String codigoPedido, String status, LocalDate data) {
-        log.info(" Buscando pedidos - Cliente: {}, Código: {}, Status: {}, Data {}",
-                cliente, codigoPedido, status, data);
+    public List<Pedido> retornarPedidosPendentes(String cliente, String codigoPedido, String status, String idIntegracao, LocalDate data) {
+        log.info(" Buscando pedidos - Cliente: {}, Código: {}, Status: {}, IdIntegração: {}, Data {}",
+                cliente, codigoPedido, status, idIntegracao, data);
 
-        Integer statusInt = null;
-        if (status != null && !status.isEmpty()) {
-            try {
-                statusInt = Integer.parseInt(status.replace(",", "."));
-            } catch (NumberFormatException e) {
-                log.warn("Status inválido: {}", status);
-                statusInt = null;
-            }
-        }
+        return repository.buscarPendentes(cliente, codigoPedido, parseStatus(status), idIntegracao, data);
+    }
 
-        //  ORDEM IMPORTA! Mais específico primeiro (3 filtros)
-        if (cliente != null && codigoPedido != null && statusInt != null) {
-            log.debug("Buscando por: cliente + código + status");
-            return repository.findByCodigoPedidoAndClienteAndStatus(codigoPedido, cliente, statusInt);
+    private Integer parseStatus(String status) {
+        if (status == null || status.isEmpty()) {
+            return null;
         }
-        else if (cliente != null &&  statusInt != null && data != null)
-        {
-            log.debug("Buscando por: cliente + status + data");
-            return repository.findByClienteAndStatusAndDataPedido(cliente, statusInt, data);
-        }
-        //  cliente + código (sem status)
-        else if (cliente != null && codigoPedido != null) {
-            log.debug("Buscando por: cliente + código");
-            return repository.findByCodigoPedidoAndCliente(codigoPedido, cliente);
-        }
-        //  código + status (sem cliente)
-        else if (codigoPedido != null && statusInt != null) {
-            log.debug("Buscando por: código + status");
-            return repository.findByCodigoPedidoAndStatus(codigoPedido, statusInt);
-        }
-        //  Cliente + Status (sem código)
-        else if (cliente != null && statusInt != null) {
-            log.debug("Buscando por: cliente + status");
-            return repository.findByClienteAndStatus(cliente, statusInt);
-        }
-        // Apenas cliente
-        else if (cliente != null) {
-            log.debug("Buscando por: cliente");
-            return repository.findByCliente(cliente);
-        }
-        // Apenas código
-        else if (codigoPedido != null) {
-            log.debug("Buscando por: código");
-            return repository.findByCodigoPedido(codigoPedido);
-        }
-        // Apenas status
-        else if (statusInt != null) {
-            log.debug("Buscando por: status");
-            return repository.findByStatus(statusInt);
-        }
-        // Todos
-        else {
-            log.debug("Retornando TODOS os pedidos");
-            return repository.findAll();
+        try {
+            return Integer.parseInt(status.replace(",", "."));
+        } catch (NumberFormatException e) {
+            log.warn("Status inválido: {}", status);
+            return null;
         }
     }
-    public void removePedidoDoMonitoramento(String codigoPedido, String cliente) {
-        log.info("  Removendo pedido - Código: {}, Cliente: {}", codigoPedido, cliente);
 
-        List<Pedido> pedido = repository.findByCodigoPedidoAndCliente(codigoPedido, cliente);
-
-        if (pedido.isEmpty()) {
-            log.warn(" Pedido não encontrado para remover");
-            throw new RuntimeException("Pedido não encontrado");
-        }
-
-        Pedido pedidoRemovido = pedido.get(0);
-        repository.delete(pedidoRemovido);
-
-        log.info(" Pedido removido com sucesso");
+    private static String chave(String cliente, String codigoPedido) {
+        return cliente + "|" + codigoPedido;
     }
 }

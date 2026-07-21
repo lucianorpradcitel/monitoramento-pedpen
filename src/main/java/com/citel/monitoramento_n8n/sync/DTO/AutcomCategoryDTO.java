@@ -2,7 +2,7 @@ package com.citel.monitoramento_n8n.sync.DTO;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class autcomCategoryDTO {
+public class AutcomCategoryDTO {
 
     // Campo que o ERP retorna como "codigo"
     @JsonProperty("codigo")

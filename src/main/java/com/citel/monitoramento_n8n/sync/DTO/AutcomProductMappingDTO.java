@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
 import java.util.Map;
 
-public class autcomProductMappingDTO {
+public class AutcomProductMappingDTO {
 
     @JsonProperty("codigoExterno")
     private String codigoExterno;

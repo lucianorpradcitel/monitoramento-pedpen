@@ -5,7 +5,7 @@ import lombok.Data;
 
 
 @Data
-public class shopifyProductVariantDTO {
+public class ShopifyProductVariantDTO {
 
     @JsonProperty("productId")
     private String productId;

@@ -21,7 +21,7 @@ public class ProdutoService {
 
         this.repository = repository;
     }
-    public Produto registrarProduto(ProdutoDTO produtoDTO) {
+    public Produto registrarProduto(ProdutoDTO produtoDTO, String idInt) {
 
        Optional<Produto> produtoComErro =  repository.findByCodigoProdutoAndClienteAndMensagemErro(produtoDTO.codigoProduto(), produtoDTO.cliente(), produtoDTO.mensagemErro());
 
@@ -33,6 +33,8 @@ public class ProdutoService {
             novoProduto.setErro(produtoDTO.mensagemErro());
             novoProduto.setCliente(produtoDTO.cliente());
             novoProduto.setPlataforma(produtoDTO.plataforma());
+            novoProduto.setIdIntegracao(idInt);   // vem do cliente autenticado (CADCLI.CLI_CODAUT)
+            novoProduto.setRotina(produtoDTO.rotina());
             return repository.save(novoProduto);
         }
         else {
@@ -41,25 +43,12 @@ public class ProdutoService {
     }
 
 
-
-
-    public List<Produto> retornarProdutosPendentes(String codigoProduto, String cliente) {
-        log.info("🔍 Buscando Produtos - Cliente: {}, Código: {}",
-                cliente, codigoProduto);
-
-        if (codigoProduto == null && cliente == null)
-        {
-            return repository.findByStatus(0);
-        }
-        else if (codigoProduto == null && cliente != null)
-        {
-            return repository.findByCliente(cliente);
-        }
-        else {
-
-            return repository.findByCodigoProdutoAndClienteAndStatus(codigoProduto, cliente, 0);
-        }
+    public List<Produto> retornarProdutosPendentes(String codigoProduto, String cliente, String idIntegracao) {
+        log.info("🔍 Buscando Produtos - Cliente: {}, Código: {}", cliente, codigoProduto);
+        return repository.buscarPendentes(codigoProduto, cliente, idIntegracao);
     }
+
+
     public Optional<Produto> registraComoResolvido(String codigoProduto, String cliente, int status, String erro) {
         return repository.findByCodigoProdutoAndCliente(codigoProduto, cliente)
                 .map(produto -> {
