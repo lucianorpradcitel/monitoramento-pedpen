@@ -87,7 +87,7 @@ public class ProdutoController {
     })
     @PatchMapping()
     public ResponseEntity<Produto> atualizarPedido(@RequestBody ProdutoDTO request) {
-        return service.registraComoResolvido(request.codigoProduto(), request.cliente(), request.errStatus(), request.mensagemErro())
+        return service.registraComoResolvido(request.codigoProduto(), request.cliente(), request.rotina(), request.errStatus(), request.mensagemErro())
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

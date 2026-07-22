@@ -5,11 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
-import java.util.Optional;
 
 public interface ProdutoRepository extends JpaRepository<Produto, String> {
-    Optional<Produto> findByCodigoProdutoAndCliente(String codigoProduto, String cliente);
-    Optional<Produto> findByCodigoProdutoAndClienteAndMensagemErro(String codigoProduto, String cliente, String mensagemErro);
+    List<Produto> findByCodigoProdutoAndClienteAndRotina(String codigoProduto, String cliente, String rotina);
     List<Produto> findByClienteInAndCodigoProdutoIn(List<String> clientes, List<String> codigosProduto);
     @Query("""
         SELECT p FROM Produto p

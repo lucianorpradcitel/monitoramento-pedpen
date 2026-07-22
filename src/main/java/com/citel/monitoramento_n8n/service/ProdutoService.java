@@ -27,7 +27,8 @@ public class ProdutoService {
     }
     public Produto registrarProduto(ProdutoDTO produtoDTO, String idInt) {
 
-       Optional<Produto> produtoComErro =  repository.findByCodigoProdutoAndClienteAndMensagemErro(produtoDTO.codigoProduto(), produtoDTO.cliente(), produtoDTO.mensagemErro());
+       Optional<Produto> produtoComErro =  repository.findByCodigoProdutoAndClienteAndRotina(produtoDTO.codigoProduto(), produtoDTO.cliente(), produtoDTO.rotina())
+               .stream().findFirst();
 
         if (produtoComErro.isEmpty()) {
 
@@ -87,8 +88,9 @@ public class ProdutoService {
     }
 
 
-    public Optional<Produto> registraComoResolvido(String codigoProduto, String cliente, int status, String erro) {
-        return repository.findByCodigoProdutoAndCliente(codigoProduto, cliente)
+    public Optional<Produto> registraComoResolvido(String codigoProduto, String cliente, String rotina, int status, String erro) {
+        return repository.findByCodigoProdutoAndClienteAndRotina(codigoProduto, cliente, rotina)
+                .stream().findFirst()
                 .map(produto -> {
                     produto.setStatus(status);
                     produto.setErro(erro);
