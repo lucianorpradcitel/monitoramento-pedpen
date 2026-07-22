@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface ProdutoRepository extends JpaRepository<Produto, String> {
     Optional<Produto> findByCodigoProdutoAndCliente(String codigoProduto, String cliente);
     Optional<Produto> findByCodigoProdutoAndClienteAndMensagemErro(String codigoProduto, String cliente, String mensagemErro);
+    List<Produto> findByClienteInAndCodigoProdutoIn(List<String> clientes, List<String> codigosProduto);
     @Query("""
         SELECT p FROM Produto p
         WHERE p.status = 0

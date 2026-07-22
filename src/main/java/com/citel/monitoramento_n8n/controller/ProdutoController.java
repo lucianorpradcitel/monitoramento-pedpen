@@ -3,6 +3,7 @@ package com.citel.monitoramento_n8n.controller;
 
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoDTO;
+import com.citel.monitoramento_n8n.DTO.ProdutoLoteDTO;
 import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.model.Produto;
@@ -43,7 +44,19 @@ public class ProdutoController {
         return ResponseEntity.ok(service.registrarProduto(request, cliente.getIdInt()));
     }
 
-
+    @Operation(summary = "Registra uma lista de produtos no monitoramento de erros de integração",
+            description = "Recebe uma lista de produtos onde a comunicação com a plataforma falhou e os salva/atualiza em lote com o status 'Pendente'.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Produtos registrados com sucesso",
+                    content = { @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Produto.class)) }),
+            @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
+    })
+    @PostMapping("/lote")
+    public ResponseEntity<List<Produto>> registrarProdutoList(@RequestBody List<ProdutoLoteDTO> request,
+                                                              @AuthenticationPrincipal Cliente cliente) {
+        return ResponseEntity.ok(service.registrarProdutosList(request, cliente.getIdInt()));
+    }
 
 
     @Operation(summary = "Lista todos os produtos com status 'Erro'",
