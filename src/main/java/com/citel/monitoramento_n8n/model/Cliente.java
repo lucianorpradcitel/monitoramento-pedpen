@@ -8,10 +8,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 @Entity
 @Table(name="CADCLI")
@@ -43,9 +44,14 @@ public class Cliente implements UserDetails {
 
     public Cliente() {}
 
+    /**
+     * ROLE_LOJISTA separa quem é lojista de quem é usuário interno (CADUSR). Os endpoints que
+     * gravam PROERR/PEDPEN exigem esta role: eles recebem @AuthenticationPrincipal Cliente, e um
+     * usuário interno chegaria como null ali.
+     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList();
+        return List.of(new SimpleGrantedAuthority("ROLE_LOJISTA"));
     }
 
     @Override

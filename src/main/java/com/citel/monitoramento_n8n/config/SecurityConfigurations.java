@@ -30,8 +30,20 @@ public class SecurityConfigurations {
         return http.csrf(csrf -> csrf.disable()).sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(req -> {
                     req.requestMatchers(HttpMethod.POST, "/Autenticar").permitAll();
+                    req.requestMatchers(HttpMethod.POST, "/Autenticar/google").permitAll();
                     req.requestMatchers(HttpMethod.POST, "/cadastro").permitAll();
                     req.requestMatchers("/doc**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll();
+
+                    // Estes recebem @AuthenticationPrincipal Cliente e resolvem a integração pelo
+                    // lojista autenticado. Um usuário interno (CADUSR) não é Cliente: sem esta
+                    // restrição o argumento chegaria nulo e o endpoint quebraria com 500.
+                    //
+                    // Atenção aos caminhos: PedidosController não declara @RequestMapping de
+                    // classe, então as rotas de pedido são /pendentes e /pendentes-lote na raiz —
+                    // não /pedidos/**.
+                    req.requestMatchers(HttpMethod.POST, "/produtos", "/produtos/lote",
+                            "/pendentes", "/pendentes-lote").hasRole("LOJISTA");
+
                     req.anyRequest().authenticated();
                 })
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class).build();

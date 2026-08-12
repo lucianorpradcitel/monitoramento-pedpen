@@ -21,6 +21,15 @@ public class PedidoLoteDTO {
     private LocalDateTime ultimaAlteracao;
     private int sequencialProcessamento;
 
+    /**
+     * INT_CODAUT da integração que está reportando. Opcional: omitido, PEN_ID_INT fica nulo.
+     * O service confere que o código pertence ao lojista autenticado antes de gravar.
+     */
+    @Schema(description = "Código da integração (CADINT.INT_CODAUT). Opcional.")
+    private String idIntegracao;
+
+    // idIntegracao não entra aqui de propósito: quem grava é o service, depois de validar
+    // o código contra a CADINT do lojista autenticado.
     public static Pedido converterDTO(PedidoLoteDTO dto, Pedido pd) {
         pd.setCliente(dto.getCliente());
         pd.setCodigoPedido(dto.getCodigoPedido());

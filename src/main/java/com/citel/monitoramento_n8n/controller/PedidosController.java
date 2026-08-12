@@ -39,12 +39,12 @@ public class PedidosController {
     @PostMapping("/pendentes")
     public ResponseEntity<Pedido> registrarPedido(@RequestBody PedidoDTO request,
                                                   @AuthenticationPrincipal Cliente cliente) {
-        return ResponseEntity.ok(service.registrarPedido(request, cliente.getIdInt()));
+        return ResponseEntity.ok(service.registrarPedido(request, cliente.getId()));
     }
     @PostMapping("pendentes-lote")
     public ResponseEntity<List<Pedido>> registrarPedidoList(@RequestBody List<PedidoLoteDTO> request,
                                                             @AuthenticationPrincipal Cliente cliente) {
-        return ResponseEntity.ok(service.registrarPedidosList(request, cliente.getIdInt()));
+        return ResponseEntity.ok(service.registrarPedidosList(request, cliente.getId()));
     }
 
 

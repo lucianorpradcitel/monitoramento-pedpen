@@ -31,4 +31,12 @@ public class PedidoDTO {
     private int sequencialProcessamento;
     @Setter
     private String rotina;
+
+    /**
+     * INT_CODAUT da integração que está reportando. Opcional: omitido, PEN_ID_INT fica nulo.
+     * O service confere que o código pertence ao lojista autenticado antes de gravar.
+     */
+    @Setter
+    @Schema(description = "Código da integração (CADINT.INT_CODAUT). Opcional.")
+    private String idIntegracao;
 }

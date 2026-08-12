@@ -11,6 +11,10 @@ public record ProdutoDTO(
         String cliente,
         String plataforma,
         int errStatus,
+        /**
+         * INT_CODAUT da integração que está reportando. Opcional: omitido, PRO_ID_INT fica nulo.
+         * O service confere que o código pertence ao lojista autenticado antes de gravar.
+         */
         String idIntegracao,
         String rotina
 ) {

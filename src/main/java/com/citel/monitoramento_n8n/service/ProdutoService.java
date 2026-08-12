@@ -7,6 +7,7 @@ import com.citel.monitoramento_n8n.model.Produto;
 import com.citel.monitoramento_n8n.repository.ProdutoRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,12 +21,14 @@ public class ProdutoService {
 
 
     private final ProdutoRepository repository;
+    private final IntegracaoService integracaoService;
 
-    public ProdutoService(ProdutoRepository repository) {
+    public ProdutoService(ProdutoRepository repository, IntegracaoService integracaoService) {
 
         this.repository = repository;
+        this.integracaoService = integracaoService;
     }
-    public Produto registrarProduto(ProdutoDTO produtoDTO, String idInt) {
+    public Produto registrarProduto(ProdutoDTO produtoDTO, Long codigoCliente) {
 
        Optional<Produto> produtoComErro =  repository.findByCodigoProdutoAndClienteAndRotina(produtoDTO.codigoProduto(), produtoDTO.cliente(), produtoDTO.rotina())
                .stream().findFirst();
@@ -38,7 +41,11 @@ public class ProdutoService {
             novoProduto.setErro(produtoDTO.mensagemErro());
             novoProduto.setCliente(produtoDTO.cliente());
             novoProduto.setPlataforma(produtoDTO.plataforma());
-            novoProduto.setIdIntegracao(idInt);   // vem do cliente autenticado (CADCLI.CLI_CODAUT)
+            // Vem do payload e é conferido contra a CADINT do lojista autenticado.
+            // Omitido, fica nulo — o CADCLI.CLI_CODAUT não serve mais como origem: ele é um
+            // valor por lojista e não distingue as N integrações que um lojista pode ter.
+            novoProduto.setIdIntegracao(
+                    integracaoService.resolverCodigoIntegracao(produtoDTO.idIntegracao(), codigoCliente));
             novoProduto.setRotina(produtoDTO.rotina());
             return repository.save(novoProduto);
         }
@@ -48,11 +55,16 @@ public class ProdutoService {
     }
 
 
-    public List<Produto> registrarProdutosList(List<ProdutoLoteDTO> listaProdutos, String idInt) {
+    public List<Produto> registrarProdutosList(List<ProdutoLoteDTO> listaProdutos, Long codigoCliente) {
         List<String> clientes = listaProdutos.stream()
                 .map(ProdutoLoteDTO::getCliente).distinct().toList();
         List<String> codigos = listaProdutos.stream()
                 .map(ProdutoLoteDTO::getCodigoProduto).distinct().toList();
+
+        // Valida todos os códigos de integração do lote numa query só, antes de gravar qualquer
+        // coisa: se um deles não for do lojista, o lote inteiro é recusado.
+        integracaoService.resolverCodigosIntegracao(
+                listaProdutos.stream().map(ProdutoLoteDTO::getIdIntegracao).toList(), codigoCliente);
 
         // Busca todos os existentes numa única query (evita N+1) e indexa por cliente|codigoProduto|rotina
         Map<String, Produto> existentesPorChave = repository
@@ -72,7 +84,8 @@ public class ProdutoService {
             if (novo) {
                 pro.setStatus(0);   // só define status quando é novo
             }
-            pro.setIdIntegracao(idInt);   // vem do cliente autenticado (CADCLI.CLI_CODAUT)
+            // Já validado acima; omitido, fica nulo.
+            pro.setIdIntegracao(StringUtils.hasText(dto.getIdIntegracao()) ? dto.getIdIntegracao().trim() : null);
 
             log.info(novo ? "Produto criado - {}" : "Produto atualizado - {}", dto.getCodigoProduto());
             listaPro.add(pro);

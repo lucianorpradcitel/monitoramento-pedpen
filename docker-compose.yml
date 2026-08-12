@@ -7,6 +7,10 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_USER=${DATABASE_USER}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      # Precisa ser o MESMO client ID do front: é o audience do ID Token do Google.
+      # Sem ele o POST /Autenticar/google responde 422 e ninguém entra na tela de onboarding.
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_DOMINIO=${GOOGLE_DOMINIO:-citelsoftware.com.br}
       - SPRING_DATASOURCE_HIKARI_MAX_LIFETIME=600000
       - SPRING_WEB_CORS_ALLOWED_ORIGINS=*
       - SPRING_WEB_CORS_ALLOWED_METHODS=GET,POST,PUT,DELETE,PATCH,OPTIONS

@@ -41,7 +41,7 @@ public class ProdutoController {
     @PostMapping
     public ResponseEntity<Produto> registrarProduto(@RequestBody ProdutoDTO request,
                                                     @AuthenticationPrincipal Cliente cliente) {
-        return ResponseEntity.ok(service.registrarProduto(request, cliente.getIdInt()));
+        return ResponseEntity.ok(service.registrarProduto(request, cliente.getId()));
     }
 
     @Operation(summary = "Registra uma lista de produtos no monitoramento de erros de integração",
@@ -55,7 +55,7 @@ public class ProdutoController {
     @PostMapping("/lote")
     public ResponseEntity<List<Produto>> registrarProdutoList(@RequestBody List<ProdutoLoteDTO> request,
                                                               @AuthenticationPrincipal Cliente cliente) {
-        return ResponseEntity.ok(service.registrarProdutosList(request, cliente.getIdInt()));
+        return ResponseEntity.ok(service.registrarProdutosList(request, cliente.getId()));
     }
 
 
