@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -97,6 +98,32 @@ public class PedidoService {
         return repository.buscarPendentes(cliente, codigoPedido, parseStatus(status), idIntegracao, data);
     }
 
+    /**
+     * Busca por uma lista de status (ex.: ?status=1,2,3), opcionalmente combinada com os demais
+     * filtros. Lista omitida ou vazia = sem filtro de status.
+     */
+    public List<Pedido> retornarPedidos(List<Integer> status, String cliente, String codigoPedido,
+                                        String idIntegracao, LocalDate data) {
+        List<Integer> statusFiltro = status == null
+                ? List.of()
+                : status.stream().filter(Objects::nonNull).distinct().toList();
+
+        log.info("Buscando pedidos - Status: {}, Cliente: {}, Código: {}, IdIntegração: {}, Data: {}",
+                statusFiltro, cliente, codigoPedido, idIntegracao, data);
+
+        boolean filtrarStatus = !statusFiltro.isEmpty();
+
+        return repository.buscarPorStatus(
+                filtrarStatus,
+                // Ignorada quando filtrarStatus = false, mas precisa ir preenchida: IN com
+                // coleção vazia quebra o bind do parâmetro.
+                filtrarStatus ? statusFiltro : List.of(Integer.MIN_VALUE),
+                normalizar(cliente),
+                normalizar(codigoPedido),
+                normalizar(idIntegracao),
+                data);
+    }
+
     private Integer parseStatus(String status) {
         if (status == null || status.isEmpty()) {
             return null;
@@ -107,6 +134,11 @@ public class PedidoService {
             log.warn("Status inválido: {}", status);
             return null;
         }
+    }
+
+    /** Query param em branco (?cliente=) vale como ausente, e não como "cliente igual a vazio". */
+    private static String normalizar(String valor) {
+        return StringUtils.hasText(valor) ? valor.trim() : null;
     }
 
     private static String chave(String cliente, String codigoPedido) {

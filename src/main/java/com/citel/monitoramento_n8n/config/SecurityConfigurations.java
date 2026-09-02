@@ -39,8 +39,9 @@ public class SecurityConfigurations {
                     // restrição o argumento chegaria nulo e o endpoint quebraria com 500.
                     //
                     // Atenção aos caminhos: PedidosController não declara @RequestMapping de
-                    // classe, então as rotas de pedido são /pendentes e /pendentes-lote na raiz —
-                    // não /pedidos/**.
+                    // classe, então cada rota vive na raiz: POST /pendentes e /pendentes-lote,
+                    // GET /pendentes e GET /pedidos. Só os POSTs precisam do Cliente autenticado;
+                    // os GETs ficam no anyRequest().authenticated() abaixo.
                     req.requestMatchers(HttpMethod.POST, "/produtos", "/produtos/lote",
                             "/pendentes", "/pendentes-lote").hasRole("LOJISTA");
 

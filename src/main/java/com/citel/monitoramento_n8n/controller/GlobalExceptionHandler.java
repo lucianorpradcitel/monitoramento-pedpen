@@ -13,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -84,6 +85,16 @@ public class GlobalExceptionHandler {
                 : "Corpo da requisição inválido ou mal formado";
 
         return corpo(HttpStatus.BAD_REQUEST, mensagem);
+    }
+
+    /**
+     * Query param com tipo errado (ex.: /pedidos?status=abc) também é erro do chamador.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleParametroInvalido(MethodArgumentTypeMismatchException e) {
+        log.info("Parâmetro com tipo inválido: {}", e.getMessage());
+        return corpo(HttpStatus.BAD_REQUEST,
+                "Valor inválido para o parâmetro '" + e.getName() + "': " + e.getValue());
     }
 
     @ExceptionHandler(Exception.class)
