@@ -5,10 +5,15 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.Date;
 import java.util.UUID;
 
+
+@Getter
+@Setter
 @Entity
 @Table(name="PROERR")
 public class Produto {
@@ -31,62 +36,20 @@ public class Produto {
     private String idIntegracao;
     @Column(name="PRO_ROTINA")
     private String rotina;
+    /** Quantas vezes o mesmo produto (codigoProduto + cliente + rotina) foi reportado com erro. */
+    @Column(name="PRO_TENTAT")
+    private int tentativa;
 
     public Produto() {
         this.id = UUID.randomUUID().toString();
-
     }
 
-
-    public String getId() {return id;}
-    public String getCodigoProduto() {
-        return codigoProduto;
-    }
-    public void setCodigoProduto(String codigoProduto) {
-        this.codigoProduto = codigoProduto;
+    public void setErro(String erro) {
+        this.mensagemErro = erro;
     }
 
-    public String getErro()
-    {
-        return mensagemErro;
+    /** Soma +1 nas tentativas. Usado quando o produto já existe e o erro se repete. */
+    public void incrementarTentativa() {
+        this.tentativa = this.tentativa + 1;
     }
-
-    public void setErro(String mensagemErro)
-    {
-        this.mensagemErro = mensagemErro;
-    }
-
-    public String getPlataforma()
-    {
-        return plataforma;
-    }
-
-    public void setPlataforma(String plataforma)
-    {
-        this.plataforma = plataforma;
-    }
-
-    public int getStatus()
-    {
-        return status;
-    }
-    public void setStatus(int errStatus)
-    {
-        this.status = errStatus;
-    }
-
-    public String getCliente() {return cliente;}
-    public String getIdIntegracao() {return idIntegracao;}
-
-
-    public void setCliente(String cliente) { this.cliente = cliente;}
-    public void setIdIntegracao(String idIntegracao) { this.idIntegracao = idIntegracao; }
-
-    public void setDataErro (Date dataErro) {this.dataErro = dataErro;}
-
-    public Date getDataErro (){return dataErro;}
-
-    public String getRotina() {return rotina;}
-
-    public void setRotina (String rotina) {this.rotina = rotina;}
 }

@@ -9,6 +9,7 @@ import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.model.Produto;
 import com.citel.monitoramento_n8n.service.ProdutoService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -60,20 +61,33 @@ public class ProdutoController {
 
 
     @Operation(summary = "Lista todos os produtos com status 'Erro'",
-            description = "Retorna uma lista de todos os produtos que foram registrados com erros e que ainda não foram resolvidos.")
+            description = """
+                    Retorna uma lista de todos os produtos que foram registrados com erros e que ainda
+                    não foram resolvidos. Os filtros são combinados com E.
+
+                    O número de tentativas é filtrado por comparação estrita, com as duas pontas
+                    opcionais: `?tentativaMaiorQue=5` traz os que já falharam mais de 5 vezes,
+                    `?tentativaMenorQue=5` os que falharam menos de 5 vezes, e as duas juntas
+                    delimitam uma faixa (`?tentativaMaiorQue=2&tentativaMenorQue=6` traz 3, 4 e 5).""")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de produtos com atualização pendente encontrada",
                     content = { @Content(mediaType = "application/json",
                             schema = @Schema(implementation = Pedido.class)) }),
+            @ApiResponse(responseCode = "422", description = "Faixa de tentativas impossível (ex.: maiorQue=5 com menorQue=5)"),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @GetMapping()
     public ResponseEntity<List<Produto>> retornarProdutosPendentes(
             @RequestParam(required = false) String codigoProduto,
             @RequestParam(required = false) String cliente,
-            @RequestParam(required = false) String idIntegracao
+            @RequestParam(required = false) String idIntegracao,
+            @Parameter(description = "Só produtos com MAIS tentativas que este valor (exclusivo). Ex.: 5 traz 6 ou mais")
+            @RequestParam(required = false) Integer tentativaMaiorQue,
+            @Parameter(description = "Só produtos com MENOS tentativas que este valor (exclusivo). Ex.: 5 traz 4 ou menos")
+            @RequestParam(required = false) Integer tentativaMenorQue
     ) {
-        return ResponseEntity.ok(service.retornarProdutosPendentes(codigoProduto, cliente, idIntegracao));
+        return ResponseEntity.ok(service.retornarProdutosPendentes(
+                codigoProduto, cliente, idIntegracao, tentativaMaiorQue, tentativaMenorQue));
     }
 
     @Operation(summary = "Atualiza o status de um pedido para 'Integrado'",

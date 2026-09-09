@@ -15,8 +15,12 @@ public interface ProdutoRepository extends JpaRepository<Produto, String> {
           AND (:codigoProduto IS NULL OR p.codigoProduto = :codigoProduto)
           AND (:cliente IS NULL OR p.cliente = :cliente)
           AND (:idIntegracao IS NULL OR p.idIntegracao = :idIntegracao)
+          AND (:tentativaMaiorQue IS NULL OR p.tentativa > :tentativaMaiorQue)
+          AND (:tentativaMenorQue IS NULL OR p.tentativa < :tentativaMenorQue)
         """)
     List<Produto> buscarPendentes(@Param("codigoProduto") String codigoProduto,
                                   @Param("cliente") String cliente,
-                                  @Param("idIntegracao") String idIntegracao);
+                                  @Param("idIntegracao") String idIntegracao,
+                                  @Param("tentativaMaiorQue") Integer tentativaMaiorQue,
+                                  @Param("tentativaMenorQue") Integer tentativaMenorQue);
 }
