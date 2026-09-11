@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -20,6 +21,34 @@ public class ShopifyCategoryService {
     public ShopifyCategoryService(RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+    }
+
+    /**
+     * Ponto de entrada assincrono do endpoint.
+     *
+     * A sincronizacao leva dezenas de minutos; mante-la na thread da requisicao fazia o cliente
+     * estourar timeout muito antes do fim, sem que isso interrompesse o processamento no servidor.
+     * Aqui a requisicao responde na hora e o trabalho segue no executor dedicado.
+     *
+     * O id de execucao entra nas linhas de log deste metodo para separar execucoes diferentes no
+     * console, ja que uma unica sincronizacao emite mais de nove mil linhas.
+     */
+    @Async("sincronizacaoExecutor")
+    public void iniciarSincronizacaoAsync(ShopifySyncCategoryRequest request, String execucaoId) {
+        long inicio = System.currentTimeMillis();
+        log.info("[{}] Execucao assincrona iniciada", execucaoId);
+
+        try {
+            iniciarSincronizacao(request);
+            log.info("[{}] Execucao assincrona concluida em {}s", execucaoId,
+                    (System.currentTimeMillis() - inicio) / 1000);
+
+        } catch (Exception e) {
+            // Sem este catch a excecao morreria no AsyncUncaughtExceptionHandler padrao: o cliente
+            // ja recebeu o 202 e nao ha mais ninguem para quem propaga-la.
+            log.error("[{}] Sincronizacao falhou apos {}s: {}", execucaoId,
+                    (System.currentTimeMillis() - inicio) / 1000, e.getMessage(), e);
+        }
     }
 
     public void iniciarSincronizacao(ShopifySyncCategoryRequest request) {
