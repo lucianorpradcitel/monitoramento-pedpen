@@ -28,9 +28,8 @@ public record DadosCriacaoIntegracao(
         @NotNull(message = "codigoCliente é obrigatório")
         Long codigoCliente,
 
-        @Schema(example = "tray", allowableValues = {"tray", "mercos"})
+        @Schema(example = "tray", description = "Sistema externo cadastrado em CADPLA (GET /plataformas).")
         @NotBlank(message = "plataforma é obrigatória")
-        @Pattern(regexp = "tray|mercos", message = "plataforma deve ser 'tray' ou 'mercos'")
         String plataforma,
 
         @Schema(example = "casa-furadeiras")

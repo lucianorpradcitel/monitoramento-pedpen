@@ -14,6 +14,7 @@ import com.citel.monitoramento_n8n.model.Integracao;
 import com.citel.monitoramento_n8n.model.IntegracaoId;
 import com.citel.monitoramento_n8n.repository.ClienteRepository;
 import com.citel.monitoramento_n8n.repository.IntegracaoRepository;
+import com.citel.monitoramento_n8n.repository.PlataformaRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,12 +41,6 @@ import java.util.stream.Collectors;
 @Service
 public class IntegracaoService {
 
-    /**
-     * MySQL 5.7 aceita a sintaxe de CHECK mas não aplica a restrição, então a lista fechada de
-     * plataformas tem de ser garantida aqui.
-     */
-    private static final Set<String> PLATAFORMAS_SUPORTADAS = Set.of("tray", "mercos");
-
     private static final String PREFIXO_WEBHOOK_TOKEN = "ct_";
     private static final int BYTES_WEBHOOK_TOKEN = 32;
 
@@ -53,11 +48,14 @@ public class IntegracaoService {
 
     private final IntegracaoRepository repository;
     private final ClienteRepository clienteRepository;
+    private final PlataformaRepository plataformaRepository;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public IntegracaoService(IntegracaoRepository repository, ClienteRepository clienteRepository) {
+    public IntegracaoService(IntegracaoRepository repository, ClienteRepository clienteRepository,
+                              PlataformaRepository plataformaRepository) {
         this.repository = repository;
         this.clienteRepository = clienteRepository;
+        this.plataformaRepository = plataformaRepository;
     }
 
     @Transactional
@@ -240,9 +238,9 @@ public class IntegracaoService {
     }
 
     private void validarPlataforma(String plataforma) {
-        if (!PLATAFORMAS_SUPORTADAS.contains(plataforma)) {
+        if (!plataformaRepository.existsByDescricaoIgnoreCase(plataforma)) {
             throw new BusinessException("Plataforma não suportada: " + plataforma
-                    + ". Valores aceitos: " + String.join(", ", PLATAFORMAS_SUPORTADAS));
+                    + ". Cadastre-a em POST /plataformas antes de usá-la numa integração.");
         }
     }
 
