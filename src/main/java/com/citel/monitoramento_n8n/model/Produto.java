@@ -39,6 +39,12 @@ public class Produto {
     /** Quantas vezes o mesmo produto (codigoProduto + cliente + rotina) foi reportado com erro. */
     @Column(name="PRO_TENTAT")
     private int tentativa;
+    /**
+     * Liberação do produto. 'N' marca o que foi represado e não deve sair na listagem padrão;
+     * nulo (o default da coluna) é o registro comum, sem restrição.
+     */
+    @Column(name="PRO_LIBERA", length = 1)
+    private String libera;
 
     public Produto() {
         this.id = UUID.randomUUID().toString();

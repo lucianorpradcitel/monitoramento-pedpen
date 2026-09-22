@@ -4,6 +4,7 @@ package com.citel.monitoramento_n8n.controller;
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoLoteDTO;
+import com.citel.monitoramento_n8n.DTO.ProdutoRemovidoDTO;
 import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.model.Produto;
@@ -31,7 +32,16 @@ public class ProdutoController {
         this.service = service;
     }
     @Operation(summary = "Registra um novo produto no monitoramento de erros de integração",
-            description = "Recebe os dados de um produto onde a  comunicação com a plataforma falhou e o salva com o status 'Pendente'.")
+            description = """
+                    Recebe os dados de um produto onde a comunicação com a plataforma falhou e o
+                    salva com o status 'Pendente'. É um upsert pela tripla
+                    codigoProduto + cliente + rotina: se o produto já existe, apenas soma uma tentativa.
+
+                    O campo `libera` é opcional. Enviando `N`, o produto sai da liberação e a
+                    mensagem de erro vigente recebe o sufixo ` - REMOVIDO DA LIBERACAO`, passando
+                    a ficar de fora do GET /produtos padrão. O carimbo só é aplicado na transição
+                    para `N`, então reenviar o mesmo POST não duplica o sufixo. Omitindo o campo,
+                    a liberação do registro existente permanece como está.""")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Erro registrado com sucesso",
                     content = { @Content(mediaType = "application/json",
@@ -68,7 +78,11 @@ public class ProdutoController {
                     O número de tentativas é filtrado por comparação estrita, com as duas pontas
                     opcionais: `?tentativaMaiorQue=5` traz os que já falharam mais de 5 vezes,
                     `?tentativaMenorQue=5` os que falharam menos de 5 vezes, e as duas juntas
-                    delimitam uma faixa (`?tentativaMaiorQue=2&tentativaMenorQue=6` traz 3, 4 e 5).""")
+                    delimitam uma faixa (`?tentativaMaiorQue=2&tentativaMenorQue=6` traz 3, 4 e 5).
+
+                    Sem o parâmetro `libera`, a lista traz todos os produtos que **não** estão
+                    marcados com `PRO_LIBERA = 'N'` (inclusive os que estão nulos). Informando o
+                    parâmetro, filtra pelo valor exato: `?libera=N` traz só os represados.""")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de produtos com atualização pendente encontrada",
                     content = { @Content(mediaType = "application/json",
@@ -84,25 +98,50 @@ public class ProdutoController {
             @Parameter(description = "Só produtos com MAIS tentativas que este valor (exclusivo). Ex.: 5 traz 6 ou mais")
             @RequestParam(required = false) Integer tentativaMaiorQue,
             @Parameter(description = "Só produtos com MENOS tentativas que este valor (exclusivo). Ex.: 5 traz 4 ou menos")
-            @RequestParam(required = false) Integer tentativaMenorQue
+            @RequestParam(required = false) Integer tentativaMenorQue,
+            @Parameter(description = "Valor exato da PRO_LIBERA. Omitido, traz tudo que não for 'N' (nulos inclusos)")
+            @RequestParam(required = false) String libera
     ) {
         return ResponseEntity.ok(service.retornarProdutosPendentes(
-                codigoProduto, cliente, idIntegracao, tentativaMaiorQue, tentativaMenorQue));
+                codigoProduto, cliente, idIntegracao, tentativaMaiorQue, tentativaMenorQue, libera));
     }
 
-    @Operation(summary = "Atualiza o status de um pedido para 'Integrado'",
-            description = "Busca um pedido pelo código e cliente e, se encontrado, atualiza seu status para 'Integrado'.")
+    @Operation(summary = "Remove um produto do monitoramento",
+            description = """
+                    Apaga definitivamente os registros de erro do produto. A chave é
+                    codigoProduto (PRO_CODITE) + idIntegracao (INT_CODAUT) + cliente (PRO_CLIENT):
+                    a rotina NÃO entra na chave, então o produto é removido de todas as rotinas
+                    em que aparecer, numa chamada só.
+
+                    A remoção é definitiva e não tem desfazer - não há endpoint que recrie o
+                    registro.
+
+                    É idempotente: 200 com o corpo quando apagou alguma linha, 204 quando não
+                    havia nada com aquela chave. Nos dois casos o produto está fora do
+                    monitoramento ao fim da chamada, então reenviar o mesmo DELETE não é erro.""")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Status do Pedido atualizado com sucesso",
+            @ApiResponse(responseCode = "200", description = "Produto removido; o corpo informa quantas linhas saíram",
                     content = { @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Pedido.class)) }),
-            @ApiResponse(responseCode = "404", description = "Pedido não encontrado com o código e cliente informados"),
+                            schema = @Schema(implementation = ProdutoRemovidoDTO.class)) }),
+            @ApiResponse(responseCode = "204", description = "Nenhuma linha casava com a chave - nada a remover"),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
-    @PatchMapping()
-    public ResponseEntity<Produto> atualizarPedido(@RequestBody ProdutoDTO request) {
-        return service.registraComoResolvido(request.codigoProduto(), request.cliente(), request.rotina(), request.errStatus(), request.mensagemErro())
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    @DeleteMapping()
+    public ResponseEntity<ProdutoRemovidoDTO> removerProduto(
+            @Parameter(description = "PRO_CODITE - código do produto", required = true)
+            @RequestParam String codigoProduto,
+            @Parameter(description = "INT_CODAUT - código da integração", required = true)
+            @RequestParam String idIntegracao,
+            @Parameter(description = "PRO_CLIENT - código do lojista", required = true)
+            @RequestParam String cliente
+    ) {
+        int removidos = service.removerProduto(codigoProduto, cliente, idIntegracao);
+        if (removidos == 0) {
+            // Não é erro: o estado pedido (produto fora do monitoramento) já valia antes da
+            // chamada. 204 mantém o DELETE idempotente para o n8n reprocessar sem tratar falha.
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(
+                new ProdutoRemovidoDTO(codigoProduto, cliente, idIntegracao, removidos));
     }
 }

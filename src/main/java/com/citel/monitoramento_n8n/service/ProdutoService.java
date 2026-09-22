@@ -8,6 +8,7 @@ import com.citel.monitoramento_n8n.model.Produto;
 import com.citel.monitoramento_n8n.repository.ProdutoRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
@@ -23,6 +24,12 @@ public class ProdutoService {
 
     /** Todo registro nasce com uma tentativa: o POST que o criou. */
     private static final int PRIMEIRA_TENTATIVA = 1;
+
+    /** Valor de PRO_LIBERA que marca o produto como fora da liberação. */
+    private static final String LIBERA_REMOVIDO = "N";
+
+    /** Carimbo anexado à mensagem de erro quando o produto sai da liberação. */
+    private static final String MARCA_REMOCAO = "REMOVIDO DA LIBERACAO";
 
     private final ProdutoRepository repository;
     private final IntegracaoService integracaoService;
@@ -43,7 +50,12 @@ public class ProdutoService {
             novoProduto.setStatus(0);
             novoProduto.setTentativa(PRIMEIRA_TENTATIVA);
             novoProduto.setCodigoProduto(produtoDTO.codigoProduto());
-            novoProduto.setErro(produtoDTO.mensagemErro());
+            String liberaNovo = normalizarLibera(produtoDTO.libera());
+            novoProduto.setLibera(liberaNovo);
+            // Já nasce fora da liberação: a mensagem que veio no payload é a "vigente" aqui.
+            novoProduto.setErro(removidoDaLiberacao(liberaNovo)
+                    ? marcarRemocao(produtoDTO.mensagemErro())
+                    : produtoDTO.mensagemErro());
             novoProduto.setCliente(produtoDTO.cliente());
             novoProduto.setPlataforma(produtoDTO.plataforma());
             // Vem do payload e é conferido contra a CADINT do lojista autenticado.
@@ -59,6 +71,21 @@ public class ProdutoService {
             // a tentativa. Os demais campos do registro existente ficam como estão.
             Produto existente = produtoComErro.get();
             existente.incrementarTentativa();
+
+            // Liberação omitida no payload não mexe no que já está gravado: os POSTs que o n8n
+            // já manda hoje não carregam o campo e não podem zerar a liberação de ninguém.
+            String liberaPedido = normalizarLibera(produtoDTO.libera());
+            if (liberaPedido != null && !liberaPedido.equals(existente.getLibera())) {
+                // Só carimba na TRANSIÇÃO para 'N'. Como este POST é upsert e o n8n reenvia o
+                // mesmo produto a cada falha, carimbar sempre empilharia a marca N vezes.
+                if (removidoDaLiberacao(liberaPedido)) {
+                    existente.setErro(marcarRemocao(existente.getMensagemErro()));
+                    log.info("Produto {} (cliente {}, rotina {}) removido da liberação",
+                            existente.getCodigoProduto(), existente.getCliente(), existente.getRotina());
+                }
+                existente.setLibera(liberaPedido);
+            }
+
             log.info("Produto {} (cliente {}, rotina {}) já registrado - tentativa {}",
                     existente.getCodigoProduto(), existente.getCliente(), existente.getRotina(),
                     existente.getTentativa());
@@ -116,9 +143,13 @@ public class ProdutoService {
      * exclusivas e opcionais: {@code tentativaMaiorQue = 5} traz quem tem 6 ou mais,
      * {@code tentativaMenorQue = 5} traz quem tem 4 ou menos, as duas juntas delimitam uma
      * faixa e nenhuma delas = sem filtro.
+     *
+     * <p>{@code libera} filtra pelo valor exato da PRO_LIBERA. Omitido, a listagem traz tudo que
+     * <b>não</b> está marcado com 'N' - inclusive os nulos, que são o default da coluna.
      */
     public List<Produto> retornarProdutosPendentes(String codigoProduto, String cliente, String idIntegracao,
-                                                   Integer tentativaMaiorQue, Integer tentativaMenorQue) {
+                                                   Integer tentativaMaiorQue, Integer tentativaMenorQue,
+                                                   String libera) {
         // Com as duas pontas exclusivas, precisa sobrar pelo menos um inteiro no meio: menorQue
         // tem de ser no mínimo maiorQue + 2. Recusar é melhor que devolver lista vazia, que se
         // confunde com "não há produtos nessa faixa".
@@ -131,25 +162,61 @@ public class ProdutoService {
                             + " ser ao menos tentativaMaiorQue + 2");
         }
 
-        log.info("🔍 Buscando Produtos - Cliente: {}, Código: {}, Tentativas: >{} e <{}",
-                cliente, codigoProduto, tentativaMaiorQue, tentativaMenorQue);
+        // `?libera=` vazio conta como omitido: cai na listagem padrão em vez de procurar string vazia.
+        String liberaFiltro = normalizarLibera(libera);
+
+        log.info("🔍 Buscando Produtos - Cliente: {}, Código: {}, Tentativas: >{} e <{}, Libera: {}",
+                cliente, codigoProduto, tentativaMaiorQue, tentativaMenorQue,
+                liberaFiltro == null ? "todos exceto 'N'" : liberaFiltro);
         return repository.buscarPendentes(codigoProduto, cliente, idIntegracao,
-                tentativaMaiorQue, tentativaMenorQue);
+                tentativaMaiorQue, tentativaMenorQue, liberaFiltro);
     }
 
 
-    public Optional<Produto> registraComoResolvido(String codigoProduto, String cliente, String rotina, int status, String erro) {
-        return repository.findByCodigoProdutoAndClienteAndRotina(codigoProduto, cliente, rotina)
-                .stream().findFirst()
-                .map(produto -> {
-                    produto.setStatus(status);
-                    produto.setErro(erro);
-                    return repository.save(produto);
-                });
+    /**
+     * Remove o produto do monitoramento. A chave é codigoProduto + cliente + idIntegracao:
+     * a rotina fica de fora de propósito, então o produto sai de TODAS as rotinas em que
+     * estiver registrado numa chamada só.
+     *
+     * @return quantas linhas foram apagadas; 0 quando nada casou com a chave
+     */
+    @Transactional
+    public int removerProduto(String codigoProduto, String cliente, String idIntegracao) {
+        int removidos = repository.removerTodasAsRotinas(codigoProduto, cliente, idIntegracao);
+        log.info("🗑️ Removido produto {} (cliente {}, integração {}) - {} linha(s)",
+                codigoProduto, cliente, idIntegracao, removidos);
+        return removidos;
     }
 
     private static String chave(String cliente, String codigoProduto, String rotina) {
         return cliente + "|" + codigoProduto + "|" + rotina;
+    }
+
+    /**
+     * Normaliza PRO_LIBERA: vazio/branco vira nulo (= não informado) e o resto sobe para
+     * maiúscula, para que 'n' e 'N' gravem o mesmo valor e o filtro do GET não dependa da
+     * collation da coluna.
+     */
+    private static String normalizarLibera(String libera) {
+        return StringUtils.hasText(libera) ? libera.trim().toUpperCase() : null;
+    }
+
+    private static boolean removidoDaLiberacao(String libera) {
+        return LIBERA_REMOVIDO.equals(libera);
+    }
+
+    /**
+     * Anexa {@value #MARCA_REMOCAO} à mensagem vigente. Idempotente: se a marca já está lá,
+     * devolve a mensagem intacta, então reenviar o mesmo POST não empilha carimbos.
+     */
+    private static String marcarRemocao(String mensagemVigente) {
+        if (!StringUtils.hasText(mensagemVigente)) {
+            return MARCA_REMOCAO;
+        }
+        if (mensagemVigente.contains(MARCA_REMOCAO)) {
+            return mensagemVigente;
+        }
+        return mensagemVigente + " - " + MARCA_REMOCAO;
     }
 
 

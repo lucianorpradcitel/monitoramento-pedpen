@@ -16,6 +16,12 @@ public record ProdutoDTO(
          * O service confere que o código pertence ao lojista autenticado antes de gravar.
          */
         String idIntegracao,
-        String rotina
+        String rotina,
+        /**
+         * Liberação do produto (PROERR.PRO_LIBERA). Opcional e case-insensitive.
+         * Enviar 'N' remove o produto da liberação e carimba a mensagem de erro.
+         * Omitido, a liberação do registro existente fica como está.
+         */
+        String libera
 ) {
 }
