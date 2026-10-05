@@ -54,6 +54,10 @@ public class SecurityConfigurations {
                     req.requestMatchers(HttpMethod.POST, "/plataformas", "/integracoes").hasAnyRole("ADMIN", "LOJISTA");
                     req.requestMatchers(HttpMethod.GET, "/clientes").hasAnyRole("ADMIN", "LOJISTA");
 
+                    // Recebe @AuthenticationPrincipal Usuario: token de lojista chegaria com o
+                    // principal nulo e quebraria com 500, então só usuário interno entra (403 aos demais).
+                    req.requestMatchers(HttpMethod.GET, "/usuarios/me").hasRole("INTERNO");
+
                     req.anyRequest().authenticated();
                 })
                 .exceptionHandling(erros -> erros.accessDeniedHandler(acessoNegado()))
