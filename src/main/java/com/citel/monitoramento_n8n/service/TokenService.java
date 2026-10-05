@@ -33,6 +33,12 @@ public class TokenService {
     public static final String TIPO_LOJISTA = "lojista";
     public static final String TIPO_USUARIO = "usuario";
 
+    /**
+     * Perfil do usuário interno no momento do login, para a tela decidir o que exibir. É só
+     * conforto: quem barra de verdade é o SecurityFilter, que relê o perfil do banco a cada chamada.
+     */
+    public static final String CLAIM_PERFIL = "perfil";
+
     public String gerarToken(Cliente cliente) {
         try {
             log.info("🔄 Gerando token para cliente: {}", cliente.getUsername());
@@ -72,6 +78,7 @@ public class TokenService {
                     .withSubject(usuario.getEmail())
                     .withClaim("id", usuario.getId())
                     .withClaim(CLAIM_TIPO, TIPO_USUARIO)
+                    .withClaim(CLAIM_PERFIL, usuario.isAdmin() ? Usuario.PERFIL_ADMIN : Usuario.PERFIL_USUARIO)
                     .withExpiresAt(dataExpiracao())
                     .sign(algoritmo);
 

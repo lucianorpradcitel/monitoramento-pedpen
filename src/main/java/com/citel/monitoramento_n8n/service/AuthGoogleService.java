@@ -58,6 +58,8 @@ public class AuthGoogleService {
         novo.setNome(identidade.nome());
         novo.setGoogleId(identidade.subject());
         novo.setAtivo(ATIVO);
+        // Ninguém entra como admin: promover é um UPDATE deliberado no CADUSR (USR_PERFIL).
+        novo.setPerfil(Usuario.PERFIL_USUARIO);
         novo.setDataUltimoAcesso(LocalDateTime.now());
 
         log.info("Primeiro acesso - criando usuário interno {}", identidade.email());
@@ -70,6 +72,7 @@ public class AuthGoogleService {
         // o e-mail mude no Workspace.
         usuario.setGoogleId(identidade.subject());
         usuario.setDataUltimoAcesso(LocalDateTime.now());
+        // O perfil não é tocado aqui: o login do Google nunca rebaixa nem promove ninguém.
         return usuarioRepository.save(usuario);
     }
 }
