@@ -67,8 +67,10 @@ public class ProdutoService {
             return repository.save(novoProduto);
         }
         else {
-            // Mesmo codigoProduto + cliente + rotina: o erro se repetiu, então só contabiliza
-            // a tentativa. Os demais campos do registro existente ficam como estão.
+            // Mesmo codigoProduto + cliente + rotina: o erro se repetiu. Contabiliza a tentativa e
+            // troca a mensagem pela mais recente - o motivo da falha pode mudar entre um envio e
+            // outro (ex.: "corrija o peso" vira "limite do plano atingido"). Os demais campos
+            // do registro existente ficam como estão.
             Produto existente = produtoComErro.get();
             existente.incrementarTentativa();
 
@@ -76,15 +78,22 @@ public class ProdutoService {
             // já manda hoje não carregam o campo e não podem zerar a liberação de ninguém.
             String liberaPedido = normalizarLibera(produtoDTO.libera());
             if (liberaPedido != null && !liberaPedido.equals(existente.getLibera())) {
-                // Só carimba na TRANSIÇÃO para 'N'. Como este POST é upsert e o n8n reenvia o
-                // mesmo produto a cada falha, carimbar sempre empilharia a marca N vezes.
                 if (removidoDaLiberacao(liberaPedido)) {
-                    existente.setErro(marcarRemocao(existente.getMensagemErro()));
                     log.info("Produto {} (cliente {}, rotina {}) removido da liberação",
                             existente.getCodigoProduto(), existente.getCliente(), existente.getRotina());
                 }
                 existente.setLibera(liberaPedido);
             }
+
+            // Mensagem vazia no payload mantém a gravada. Produto fora da liberação (agora ou de
+            // antes) mantém o carimbo também na mensagem nova; marcarRemocao é idempotente, então
+            // reenviar o mesmo POST não empilha a marca.
+            String mensagemVigente = StringUtils.hasText(produtoDTO.mensagemErro())
+                    ? produtoDTO.mensagemErro()
+                    : existente.getMensagemErro();
+            existente.setErro(removidoDaLiberacao(existente.getLibera())
+                    ? marcarRemocao(mensagemVigente)
+                    : mensagemVigente);
 
             log.info("Produto {} (cliente {}, rotina {}) já registrado - tentativa {}",
                     existente.getCodigoProduto(), existente.getCliente(), existente.getRotina(),

@@ -35,13 +35,14 @@ public class ProdutoController {
             description = """
                     Recebe os dados de um produto onde a comunicação com a plataforma falhou e o
                     salva com o status 'Pendente'. É um upsert pela tripla
-                    codigoProduto + cliente + rotina: se o produto já existe, apenas soma uma tentativa.
+                    codigoProduto + cliente + rotina: se o produto já existe, soma uma tentativa e
+                    troca a mensagem de erro pela enviada (mensagem vazia mantém a gravada).
 
                     O campo `libera` é opcional. Enviando `N`, o produto sai da liberação e a
                     mensagem de erro vigente recebe o sufixo ` - REMOVIDO DA LIBERACAO`, passando
-                    a ficar de fora do GET /produtos padrão. O carimbo só é aplicado na transição
-                    para `N`, então reenviar o mesmo POST não duplica o sufixo. Omitindo o campo,
-                    a liberação do registro existente permanece como está.""")
+                    a ficar de fora do GET /produtos padrão. Enquanto o produto estiver com `N`,
+                    toda mensagem nova também recebe o sufixo, sem duplicá-lo ao reenviar o mesmo
+                    POST. Omitindo o campo, a liberação do registro existente permanece como está.""")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Erro registrado com sucesso",
                     content = { @Content(mediaType = "application/json",
