@@ -54,6 +54,13 @@ public class SecurityConfigurations {
                     req.requestMatchers(HttpMethod.POST, "/plataformas", "/integracoes").hasAnyRole("ADMIN", "LOJISTA");
                     req.requestMatchers(HttpMethod.GET, "/clientes").hasAnyRole("ADMIN", "LOJISTA");
 
+                    // Edição de integração (leitura dos dados e PATCH): só ADMIN, sem a exceção do
+                    // LOJISTA das rotas acima, porque aqui nem o n8n edita. O padrão tem exatamente
+                    // dois segmentos, então não pega GET /integracoes/{slug} nem o PATCH .../tokens,
+                    // que o n8n continua usando.
+                    req.requestMatchers(HttpMethod.GET, "/integracoes/*/*").hasRole("ADMIN");
+                    req.requestMatchers(HttpMethod.PATCH, "/integracoes/*/*").hasRole("ADMIN");
+
                     // Recebe @AuthenticationPrincipal Usuario: token de lojista chegaria com o
                     // principal nulo e quebraria com 500, então só usuário interno entra (403 aos demais).
                     req.requestMatchers(HttpMethod.GET, "/usuarios/me").hasRole("INTERNO");

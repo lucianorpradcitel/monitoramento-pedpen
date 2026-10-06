@@ -2,9 +2,12 @@ package com.citel.monitoramento_n8n.controller;
 
 import com.citel.monitoramento_n8n.DTO.AtualizacaoTokensDTO;
 import com.citel.monitoramento_n8n.DTO.DadosCriacaoIntegracao;
+import com.citel.monitoramento_n8n.DTO.EdicaoIntegracaoDTO;
 import com.citel.monitoramento_n8n.DTO.IntegracaoContextoDTO;
 import com.citel.monitoramento_n8n.DTO.IntegracaoCriadaDTO;
+import com.citel.monitoramento_n8n.DTO.IntegracaoEdicaoDTO;
 import com.citel.monitoramento_n8n.DTO.IntegracaoResumoDTO;
+import com.citel.monitoramento_n8n.model.Usuario;
 import com.citel.monitoramento_n8n.service.IntegracaoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,6 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -104,6 +108,53 @@ public class IntegracaoController {
         return ResponseEntity.ok(incluirCredenciais
                 ? service.listarComCredenciais(plataforma, ativo)
                 : service.listarResumo(plataforma, ativo));
+    }
+
+    @Operation(summary = "Dados de uma integração para a tela de edição (somente ADMIN)",
+            description = """
+                    Devolve a identidade da integração e os três campos editáveis, com a chave \
+                    privada. Não traz apiToken, refreshToken nem webhookToken. Só usuário interno \
+                    com perfil ADMIN: usuário comum e lojista recebem 403.""")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Integração encontrada",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = IntegracaoEdicaoDTO.class))}),
+            @ApiResponse(responseCode = "403", description = "Não é um usuário interno ADMIN"),
+            @ApiResponse(responseCode = "404", description = "Par código de integração + lojista inexistente"),
+            @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
+    })
+    @GetMapping("/{codigoIntegracao}/{codigoCliente}")
+    public ResponseEntity<IntegracaoEdicaoDTO> buscarParaEdicao(
+            @PathVariable String codigoIntegracao,
+            @Parameter(description = "CLI_CODCLI do lojista — o código de autorização se repete entre lojistas")
+            @PathVariable Long codigoCliente) {
+        return ResponseEntity.ok(service.buscarParaEdicao(codigoIntegracao, codigoCliente));
+    }
+
+    @Operation(summary = "Edita webservice, URL da API e chave privada de uma integração (somente ADMIN)",
+            description = """
+                    Só estes três campos podem ser alterados; qualquer outro no corpo é ignorado. \
+                    Campo ausente ou nulo preserva o valor atual. Cada campo que realmente mudou \
+                    gera uma linha no LOGINT com o valor anterior, o atual e o nome do usuário; se \
+                    nada mudar, nada é gravado. Só usuário interno com perfil ADMIN: usuário comum \
+                    e lojista recebem 403.""")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Integração com os valores atuais",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = IntegracaoEdicaoDTO.class))}),
+            @ApiResponse(responseCode = "400", description = "Campo vazio, ou chave que não está em formato PEM"),
+            @ApiResponse(responseCode = "403", description = "Não é um usuário interno ADMIN"),
+            @ApiResponse(responseCode = "404", description = "Par código de integração + lojista inexistente"),
+            @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
+    })
+    @PatchMapping("/{codigoIntegracao}/{codigoCliente}")
+    public ResponseEntity<IntegracaoEdicaoDTO> editar(
+            @PathVariable String codigoIntegracao,
+            @Parameter(description = "CLI_CODCLI do lojista — o código de autorização se repete entre lojistas")
+            @PathVariable Long codigoCliente,
+            @RequestBody @Valid EdicaoIntegracaoDTO dados,
+            @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(service.editar(codigoIntegracao, codigoCliente, dados, usuario));
     }
 
     @Operation(summary = "Atualiza os tokens de uma integração (ADMIN_Tray_Token_*)",
