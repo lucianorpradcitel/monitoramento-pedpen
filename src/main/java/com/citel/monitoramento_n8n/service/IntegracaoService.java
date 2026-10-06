@@ -2,8 +2,10 @@ package com.citel.monitoramento_n8n.service;
 
 import com.citel.monitoramento_n8n.DTO.AtualizacaoTokensDTO;
 import com.citel.monitoramento_n8n.DTO.DadosCriacaoIntegracao;
+import com.citel.monitoramento_n8n.DTO.EdicaoIntegracaoDTO;
 import com.citel.monitoramento_n8n.DTO.IntegracaoContextoDTO;
 import com.citel.monitoramento_n8n.DTO.IntegracaoCriadaDTO;
+import com.citel.monitoramento_n8n.DTO.IntegracaoEdicaoDTO;
 import com.citel.monitoramento_n8n.DTO.IntegracaoResumoDTO;
 import com.citel.monitoramento_n8n.exception.BusinessException;
 import com.citel.monitoramento_n8n.exception.ConflictException;
@@ -12,8 +14,11 @@ import com.citel.monitoramento_n8n.exception.UnauthorizedException;
 import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Integracao;
 import com.citel.monitoramento_n8n.model.IntegracaoId;
+import com.citel.monitoramento_n8n.model.LogIntegracao;
+import com.citel.monitoramento_n8n.model.Usuario;
 import com.citel.monitoramento_n8n.repository.ClienteRepository;
 import com.citel.monitoramento_n8n.repository.IntegracaoRepository;
+import com.citel.monitoramento_n8n.repository.LogIntegracaoRepository;
 import com.citel.monitoramento_n8n.repository.PlataformaRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HexFormat;
 import java.util.List;
@@ -46,16 +52,23 @@ public class IntegracaoService {
 
     private static final String ATIVO = "S";
 
+    /** Colunas do CADINT que a edição pode mexer, na ordem em que o log é gravado. */
+    static final String CAMPO_URL_WEBSERVICE = "INT_URLWBS";
+    static final String CAMPO_URL_API = "INT_URLAPI";
+    static final String CAMPO_CHAVE_PRIVADA = "INT_PRVKEY";
+
     private final IntegracaoRepository repository;
     private final ClienteRepository clienteRepository;
     private final PlataformaRepository plataformaRepository;
+    private final LogIntegracaoRepository logRepository;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public IntegracaoService(IntegracaoRepository repository, ClienteRepository clienteRepository,
-                              PlataformaRepository plataformaRepository) {
+                              PlataformaRepository plataformaRepository, LogIntegracaoRepository logRepository) {
         this.repository = repository;
         this.clienteRepository = clienteRepository;
         this.plataformaRepository = plataformaRepository;
+        this.logRepository = logRepository;
     }
 
     @Transactional
@@ -179,6 +192,87 @@ public class IntegracaoService {
                 salva.getCodigoIntegracao(), salva.getCodigoCliente(), salva.getSlug());
 
         return IntegracaoResumoDTO.de(salva);
+    }
+
+    /** Dados da tela de edição, com a chave privada. Quem chama já é ADMIN (ver SecurityConfigurations). */
+    @Transactional(readOnly = true)
+    public IntegracaoEdicaoDTO buscarParaEdicao(String codigoIntegracao, Long codigoCliente) {
+        return IntegracaoEdicaoDTO.de(buscarOuFalhar(codigoIntegracao, codigoCliente));
+    }
+
+    /**
+     * Edita webservice, URL da API e chave privada. Campo ausente ou nulo não mexe em nada, e só
+     * vira linha no LOGINT o que realmente mudou: reenviar o valor que já está lá não grava log.
+     *
+     * A atualização e o log andam na mesma transação, então nunca há alteração sem registro, nem
+     * registro de uma alteração que não aconteceu.
+     */
+    @Transactional
+    public IntegracaoEdicaoDTO editar(String codigoIntegracao, Long codigoCliente, EdicaoIntegracaoDTO dados,
+                                      Usuario usuario) {
+        Integracao integracao = buscarOuFalhar(codigoIntegracao, codigoCliente);
+        List<LogIntegracao> alteracoes = new ArrayList<>();
+
+        // URLs vão sem espaços nas pontas; a chave PEM vai exatamente como veio (reformatar quebra o RS256).
+        String urlWebservice = aparar(dados.urlWebservice());
+        if (urlWebservice != null && !urlWebservice.equals(integracao.getUrlWebservice())) {
+            alteracoes.add(registrar(integracao, usuario, CAMPO_URL_WEBSERVICE, integracao.getUrlWebservice(), urlWebservice));
+            integracao.setUrlWebservice(urlWebservice);
+        }
+
+        String urlApi = aparar(dados.urlApi());
+        if (urlApi != null && !urlApi.equals(integracao.getUrlApi())) {
+            alteracoes.add(registrar(integracao, usuario, CAMPO_URL_API, integracao.getUrlApi(), urlApi));
+            integracao.setUrlApi(urlApi);
+        }
+
+        String chavePrivada = dados.chavePrivada();
+        if (chavePrivada != null && !chavePrivada.equals(integracao.getChavePrivada())) {
+            alteracoes.add(registrar(integracao, usuario, CAMPO_CHAVE_PRIVADA, integracao.getChavePrivada(), chavePrivada));
+            integracao.setChavePrivada(chavePrivada);
+        }
+
+        if (alteracoes.isEmpty()) {
+            log.info("Edição sem alterações - código: {}, lojista: {}", codigoIntegracao, codigoCliente);
+            return IntegracaoEdicaoDTO.de(integracao);
+        }
+
+        Integracao salva = repository.save(integracao);
+        logRepository.saveAll(alteracoes);
+
+        // Só os nomes dos campos: a chave privada e as URLs não vão para o log da aplicação.
+        log.info("Integração editada - código: {}, lojista: {}, campos: {}, por: {}",
+                codigoIntegracao, codigoCliente,
+                alteracoes.stream().map(LogIntegracao::getCampoAlterado).toList(), nomeDe(usuario));
+
+        return IntegracaoEdicaoDTO.de(salva);
+    }
+
+    private LogIntegracao registrar(Integracao integracao, Usuario usuario, String campo, String anterior, String atual) {
+        LogIntegracao linha = new LogIntegracao();
+        linha.setNomePlataforma(integracao.getPlataforma());
+        linha.setNomeCliente(integracao.getCliente().getNome());
+        linha.setCodigoIntegracao(integracao.getCodigoIntegracao());
+        linha.setCampoAlterado(campo);
+        linha.setValorAnterior(anterior);
+        linha.setValorAtual(atual);
+        linha.setNomeUsuario(nomeDe(usuario));
+        return linha;
+    }
+
+    /** O nome do CADUSR; se o cadastro vier sem nome, o e-mail, para o log nunca ficar anônimo. */
+    private String nomeDe(Usuario usuario) {
+        return StringUtils.hasText(usuario.getNome()) ? usuario.getNome() : usuario.getEmail();
+    }
+
+    private String aparar(String valor) {
+        return valor == null ? null : valor.trim();
+    }
+
+    private Integracao buscarOuFalhar(String codigoIntegracao, Long codigoCliente) {
+        return repository.findByCodigoIntegracaoAndCodigoCliente(codigoIntegracao, codigoCliente)
+                .orElseThrow(() -> new NotFoundException("Integração não encontrada com o código "
+                        + codigoIntegracao + " para o lojista " + codigoCliente));
     }
 
     /**
