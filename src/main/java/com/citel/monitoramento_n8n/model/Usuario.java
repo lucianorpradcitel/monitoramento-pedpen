@@ -31,6 +31,9 @@ import java.util.List;
 @Setter
 public class Usuario implements UserDetails {
 
+    public static final String PERFIL_ADMIN = "ADMIN";
+    public static final String PERFIL_USUARIO = "USUARIO";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "USR_CODUSR")
@@ -50,14 +53,34 @@ public class Usuario implements UserDetails {
     @Column(name = "USR_ATIVO_", length = 1, nullable = false)
     private String ativo;
 
+    /**
+     * Perfil de acesso: 'ADMIN' ou 'USUARIO'. Quem é admin é dado do banco, nunca do código: muda-se
+     * com um UPDATE no CADUSR e vale na próxima requisição, porque o SecurityFilter relê o usuário a
+     * cada chamada. Todo usuário novo nasce 'USUARIO'.
+     */
+    @Column(name = "USR_PERFIL", length = 10, nullable = false)
+    private String perfil = PERFIL_USUARIO;
+
     @Column(name = "USR_DHUINC", insertable = false, updatable = false)
     private LocalDateTime dataInclusao;
 
     @Column(name = "USR_DHUACE")
     private LocalDateTime dataUltimoAcesso;
 
+    /**
+     * Compara sem diferenciar caixa nem espaços. Nulo ou qualquer outro valor conta como não-admin:
+     * na dúvida o acesso fecha, e um erro de digitação no banco nunca promove ninguém.
+     */
+    public boolean isAdmin() {
+        return perfil != null && PERFIL_ADMIN.equalsIgnoreCase(perfil.trim());
+    }
+
+    /** ROLE_INTERNO vale para todos; ROLE_ADMIN é somado só para quem tem o perfil ADMIN. */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (isAdmin()) {
+            return List.of(new SimpleGrantedAuthority("ROLE_INTERNO"), new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }
         return List.of(new SimpleGrantedAuthority("ROLE_INTERNO"));
     }
 

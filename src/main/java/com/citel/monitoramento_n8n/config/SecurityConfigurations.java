@@ -1,6 +1,7 @@
 package com.citel.monitoramento_n8n.config;
 
 import com.citel.monitoramento_n8n.security.SecurityFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -12,6 +13,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -45,9 +47,31 @@ public class SecurityConfigurations {
                     req.requestMatchers(HttpMethod.POST, "/produtos", "/produtos/lote",
                             "/pendentes", "/pendentes-lote").hasRole("LOJISTA");
 
+                    // Telas de admin do portal (Plataformas e Nova integração). A única barreira é
+                    // para o usuário interno SEM perfil ADMIN (USR_PERFIL em CADUSR): ele leva 403.
+                    // Lojistas — o n8n — e admins passam exatamente como antes, de propósito.
+                    // O POST /cadastro, mais acima, continua aberto: ainda é usado por outros clientes.
+                    req.requestMatchers(HttpMethod.POST, "/plataformas", "/integracoes").hasAnyRole("ADMIN", "LOJISTA");
+                    req.requestMatchers(HttpMethod.GET, "/clientes").hasAnyRole("ADMIN", "LOJISTA");
+
+                    // Recebe @AuthenticationPrincipal Usuario: token de lojista chegaria com o
+                    // principal nulo e quebraria com 500, então só usuário interno entra (403 aos demais).
+                    req.requestMatchers(HttpMethod.GET, "/usuarios/me").hasRole("INTERNO");
+
                     req.anyRequest().authenticated();
                 })
+                .exceptionHandling(erros -> erros.accessDeniedHandler(acessoNegado()))
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class).build();
+    }
+
+    /** 403 em JSON, no mesmo formato {"error": ...} que a tela já sabe ler. */
+    private static AccessDeniedHandler acessoNegado()
+    {
+        return (request, response, e) -> {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"error\":\"Você não tem permissão para esta ação.\"}");
+        };
     }
 
     @Bean
