@@ -42,6 +42,11 @@ public class Pedido {
     }
 
 
+    /** PEN_IDPED_: identifica a linha. O codigoPedido sozinho se repete entre lojistas. */
+    public String getId() {
+        return id;
+    }
+
     public String getCodigoPedido() {
         return codigoPedido;
     }

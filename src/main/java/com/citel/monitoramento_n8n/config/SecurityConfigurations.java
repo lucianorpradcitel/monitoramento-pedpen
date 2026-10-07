@@ -65,6 +65,10 @@ public class SecurityConfigurations {
                     // principal nulo e quebraria com 500, então só usuário interno entra (403 aos demais).
                     req.requestMatchers(HttpMethod.GET, "/usuarios/me").hasRole("INTERNO");
 
+                    // Reprocessar um pedido (volta ao status 0): só usuário interno ADMIN, sem a exceção
+                    // do LOJISTA — o n8n não reprocessa por aqui. O 403 vale também para Swagger/Postman.
+                    req.requestMatchers(HttpMethod.PATCH, "/pedidos/*/reprocessar").hasRole("ADMIN");
+
                     req.anyRequest().authenticated();
                 })
                 .exceptionHandling(erros -> erros.accessDeniedHandler(acessoNegado()))
