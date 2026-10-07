@@ -79,11 +79,7 @@ public class ProdutoController {
                     O número de tentativas é filtrado por comparação estrita, com as duas pontas
                     opcionais: `?tentativaMaiorQue=5` traz os que já falharam mais de 5 vezes,
                     `?tentativaMenorQue=5` os que falharam menos de 5 vezes, e as duas juntas
-                    delimitam uma faixa (`?tentativaMaiorQue=2&tentativaMenorQue=6` traz 3, 4 e 5).
-
-                    Sem o parâmetro `libera`, a lista traz todos os produtos que **não** estão
-                    marcados com `PRO_LIBERA = 'N'` (inclusive os que estão nulos). Informando o
-                    parâmetro, filtra pelo valor exato: `?libera=N` traz só os represados.""")
+                    delimitam uma faixa (`?tentativaMaiorQue=2&tentativaMenorQue=6` traz 3, 4 e 5).""")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de produtos com atualização pendente encontrada",
                     content = { @Content(mediaType = "application/json",
@@ -99,12 +95,10 @@ public class ProdutoController {
             @Parameter(description = "Só produtos com MAIS tentativas que este valor (exclusivo). Ex.: 5 traz 6 ou mais")
             @RequestParam(required = false) Integer tentativaMaiorQue,
             @Parameter(description = "Só produtos com MENOS tentativas que este valor (exclusivo). Ex.: 5 traz 4 ou menos")
-            @RequestParam(required = false) Integer tentativaMenorQue,
-            @Parameter(description = "Valor exato da PRO_LIBERA. Omitido, traz tudo que não for 'N' (nulos inclusos)")
-            @RequestParam(required = false) String libera
+            @RequestParam(required = false) Integer tentativaMenorQue
     ) {
         return ResponseEntity.ok(service.retornarProdutosPendentes(
-                codigoProduto, cliente, idIntegracao, tentativaMaiorQue, tentativaMenorQue, libera));
+                codigoProduto, cliente, idIntegracao, tentativaMaiorQue, tentativaMenorQue));
     }
 
     @Operation(summary = "Remove um produto do monitoramento",

@@ -152,13 +152,9 @@ public class ProdutoService {
      * exclusivas e opcionais: {@code tentativaMaiorQue = 5} traz quem tem 6 ou mais,
      * {@code tentativaMenorQue = 5} traz quem tem 4 ou menos, as duas juntas delimitam uma
      * faixa e nenhuma delas = sem filtro.
-     *
-     * <p>{@code libera} filtra pelo valor exato da PRO_LIBERA. Omitido, a listagem traz tudo que
-     * <b>não</b> está marcado com 'N' - inclusive os nulos, que são o default da coluna.
      */
     public List<Produto> retornarProdutosPendentes(String codigoProduto, String cliente, String idIntegracao,
-                                                   Integer tentativaMaiorQue, Integer tentativaMenorQue,
-                                                   String libera) {
+                                                   Integer tentativaMaiorQue, Integer tentativaMenorQue) {
         // Com as duas pontas exclusivas, precisa sobrar pelo menos um inteiro no meio: menorQue
         // tem de ser no mínimo maiorQue + 2. Recusar é melhor que devolver lista vazia, que se
         // confunde com "não há produtos nessa faixa".
@@ -171,14 +167,10 @@ public class ProdutoService {
                             + " ser ao menos tentativaMaiorQue + 2");
         }
 
-        // `?libera=` vazio conta como omitido: cai na listagem padrão em vez de procurar string vazia.
-        String liberaFiltro = normalizarLibera(libera);
-
-        log.info("🔍 Buscando Produtos - Cliente: {}, Código: {}, Tentativas: >{} e <{}, Libera: {}",
-                cliente, codigoProduto, tentativaMaiorQue, tentativaMenorQue,
-                liberaFiltro == null ? "todos exceto 'N'" : liberaFiltro);
+        log.info("🔍 Buscando Produtos - Cliente: {}, Código: {}, Tentativas: >{} e <{}",
+                cliente, codigoProduto, tentativaMaiorQue, tentativaMenorQue);
         return repository.buscarPendentes(codigoProduto, cliente, idIntegracao,
-                tentativaMaiorQue, tentativaMenorQue, liberaFiltro);
+                tentativaMaiorQue, tentativaMenorQue);
     }
 
 
@@ -203,8 +195,7 @@ public class ProdutoService {
 
     /**
      * Normaliza PRO_LIBERA: vazio/branco vira nulo (= não informado) e o resto sobe para
-     * maiúscula, para que 'n' e 'N' gravem o mesmo valor e o filtro do GET não dependa da
-     * collation da coluna.
+     * maiúscula, para que 'n' e 'N' gravem o mesmo valor.
      */
     private static String normalizarLibera(String libera) {
         return StringUtils.hasText(libera) ? libera.trim().toUpperCase() : null;

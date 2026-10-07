@@ -18,15 +18,12 @@ public interface ProdutoRepository extends JpaRepository<Produto, String> {
           AND (:idIntegracao IS NULL OR p.idIntegracao = :idIntegracao)
           AND (:tentativaMaiorQue IS NULL OR p.tentativa > :tentativaMaiorQue)
           AND (:tentativaMenorQue IS NULL OR p.tentativa < :tentativaMenorQue)
-          AND ((:libera IS NOT NULL AND p.libera = :libera)
-               OR (:libera IS NULL AND (p.libera IS NULL OR p.libera <> 'N')))
         """)
     List<Produto> buscarPendentes(@Param("codigoProduto") String codigoProduto,
                                   @Param("cliente") String cliente,
                                   @Param("idIntegracao") String idIntegracao,
                                   @Param("tentativaMaiorQue") Integer tentativaMaiorQue,
-                                  @Param("tentativaMenorQue") Integer tentativaMenorQue,
-                                  @Param("libera") String libera);
+                                  @Param("tentativaMenorQue") Integer tentativaMenorQue);
 
     /**
      * Apaga o produto em TODAS as rotinas em que ele aparece: a rotina de propósito não entra
