@@ -27,10 +27,12 @@ public interface IntegracaoRepository extends JpaRepository<Integracao, Integrac
         SELECT i FROM Integracao i
         WHERE (:plataforma IS NULL OR i.plataforma = :plataforma)
           AND (:ativo IS NULL OR i.ativo = :ativo)
+          AND (:slug IS NULL OR i.slug = :slug)
         ORDER BY i.codigoIntegracao
         """)
     List<Integracao> buscarPorFiltro(@Param("plataforma") String plataforma,
-                                     @Param("ativo") String ativo);
+                                     @Param("ativo") String ativo,
+                                     @Param("slug") String slug);
 
     /** Busca pela PK completa — o código de autorização sozinho não identifica a integração. */
     @EntityGraph(attributePaths = "cliente")

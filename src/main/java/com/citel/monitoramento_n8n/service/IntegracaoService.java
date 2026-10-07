@@ -150,15 +150,15 @@ public class IntegracaoService {
      * O default sem segredo é de propósito.
      */
     @Transactional(readOnly = true)
-    public List<IntegracaoResumoDTO> listarResumo(String plataforma, String ativo) {
-        return buscar(plataforma, ativo).stream()
+    public List<IntegracaoResumoDTO> listarResumo(String plataforma, String ativo, String slug) {
+        return buscar(plataforma, ativo, slug).stream()
                 .map(IntegracaoResumoDTO::de)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<IntegracaoContextoDTO> listarComCredenciais(String plataforma, String ativo) {
-        List<Integracao> integracoes = buscar(plataforma, ativo);
+    public List<IntegracaoContextoDTO> listarComCredenciais(String plataforma, String ativo, String slug) {
+        List<Integracao> integracoes = buscar(plataforma, ativo, slug);
         log.info("Contexto completo (com credenciais) solicitado para {} integração(ões) - plataforma: {}",
                 integracoes.size(), plataforma);
         return integracoes.stream()
@@ -325,10 +325,11 @@ public class IntegracaoService {
         return validos;
     }
 
-    private List<Integracao> buscar(String plataforma, String ativo) {
+    private List<Integracao> buscar(String plataforma, String ativo, String slug) {
         String plataformaFiltro = StringUtils.hasText(plataforma) ? normalizar(plataforma) : null;
         String ativoFiltro = StringUtils.hasText(ativo) ? ativo.toUpperCase() : null;
-        return repository.buscarPorFiltro(plataformaFiltro, ativoFiltro);
+        String slugFiltro = StringUtils.hasText(slug) ? normalizar(slug) : null;
+        return repository.buscarPorFiltro(plataformaFiltro, ativoFiltro, slugFiltro);
     }
 
     private void validarPlataforma(String plataforma) {

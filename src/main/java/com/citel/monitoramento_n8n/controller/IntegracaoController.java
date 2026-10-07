@@ -102,12 +102,12 @@ public class IntegracaoController {
     public ResponseEntity<List<?>> listarIntegracoes(
             @RequestParam(required = false) String plataforma,
             @Parameter(description = "'S' ou 'N'") @RequestParam(required = false) String ativo,
-            @Parameter(description = "Inclui a chave privada e os tokens na resposta")
-            @RequestParam(required = false, defaultValue = "false") boolean incluirCredenciais) {
+            @Parameter(description = "Inclui a chave privada e os tokens na resposta") @RequestParam(required = false, defaultValue = "false") boolean incluirCredenciais,
+            @Parameter(description = "Slug da integração (busca exata)") @RequestParam(required = false) String slug) {
 
         return ResponseEntity.ok(incluirCredenciais
-                ? service.listarComCredenciais(plataforma, ativo)
-                : service.listarResumo(plataforma, ativo));
+                ? service.listarComCredenciais(plataforma, ativo, slug)
+                : service.listarResumo(plataforma, ativo, slug));
     }
 
     @Operation(summary = "Dados de uma integração para a tela de edição (somente ADMIN)",
