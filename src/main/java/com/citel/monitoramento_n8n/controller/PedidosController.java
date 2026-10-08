@@ -4,6 +4,7 @@ import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
 import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Pedido;
+import com.citel.monitoramento_n8n.model.Usuario;
 import com.citel.monitoramento_n8n.service.PedidoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -66,6 +67,29 @@ public class PedidosController {
             @RequestParam(required = false) String idIntegracao,
             @RequestParam(required = false)  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
         return ResponseEntity.ok(service.retornarPedidosPendentes(cliente, codigoPedido, status, idIntegracao, data));
+    }
+
+    @Operation(summary = "Reprocessa um pedido com erro (somente ADMIN)",
+            description = """
+                    Devolve o pedido à fila: o status volta a 0, que é o que o n8n busca para \
+                    processar de novo. Só pedidos com erro (status 2) podem ser reprocessados; \
+                    em qualquer outro status a resposta é 409. O sequencialProcessamento não muda.
+
+                    Só usuário interno com perfil ADMIN: usuário comum e lojista recebem 403. O id \
+                    vem no corpo do GET /pedidos e do GET /pendentes.""")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Pedido de volta à fila (status 0)",
+                    content = { @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Pedido.class)) }),
+            @ApiResponse(responseCode = "403", description = "Não é um usuário interno ADMIN"),
+            @ApiResponse(responseCode = "404", description = "Pedido inexistente"),
+            @ApiResponse(responseCode = "409", description = "O pedido não está com erro"),
+            @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
+    })
+    @PatchMapping("/pedidos/{id}/reprocessar")
+    public ResponseEntity<Pedido> reprocessarPedido(@PathVariable String id,
+                                                    @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(service.reprocessar(id, usuario));
     }
 
     @Operation(summary = "Lista pedidos filtrando por um ou mais status",

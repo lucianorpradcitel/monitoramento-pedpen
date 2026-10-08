@@ -2,13 +2,18 @@ package com.citel.monitoramento_n8n.service;
 
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
+import com.citel.monitoramento_n8n.exception.ConflictException;
+import com.citel.monitoramento_n8n.exception.NotFoundException;
 import com.citel.monitoramento_n8n.model.Pedido;
+import com.citel.monitoramento_n8n.model.Usuario;
 import com.citel.monitoramento_n8n.repository.PedidosRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +23,10 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class PedidoService {
+
+    /** PEN_STATUS: 0 aguardando o n8n, 1 integrado, 2 erro, 3 finalizado. */
+    static final int STATUS_AGUARDANDO = 0;
+    static final int STATUS_ERRO = 2;
 
     private final PedidosRepository repository;
     private final IntegracaoService integracaoService;
@@ -89,6 +98,33 @@ public class PedidoService {
         }
 
         return repository.saveAll(listaPed);
+    }
+
+    /**
+     * Devolve um pedido com erro para a fila: o status volta a 0, e é o que o n8n busca para
+     * processar de novo. Só o status 2 (erro) pode ser reprocessado: um pedido já integrado ou
+     * finalizado, reprocessado, poderia ser gravado em duplicidade no ERP.
+     *
+     * O sequencialProcessamento não é tocado — quem o incrementa é o reenvio do pedido pelo n8n.
+     */
+    @Transactional
+    public Pedido reprocessar(String id, Usuario usuario) {
+        Pedido pedido = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Pedido não encontrado: " + id));
+
+        if (pedido.getStatus() != STATUS_ERRO) {
+            throw new ConflictException("Só pedidos com erro (status " + STATUS_ERRO
+                    + ") podem ser reprocessados. O status atual deste pedido é " + pedido.getStatus() + ".");
+        }
+
+        pedido.setStatus(STATUS_AGUARDANDO);
+        pedido.setUltimaAlteracao(LocalDateTime.now());
+        Pedido salvo = repository.save(pedido);
+
+        log.info("Pedido reprocessado - pedido: {}, lojista: {}, plataforma: {}, por: {}",
+                salvo.getCodigoPedido(), salvo.getCliente(), salvo.getPlataforma(),
+                StringUtils.hasText(usuario.getNome()) ? usuario.getNome() : usuario.getEmail());
+        return salvo;
     }
 
     public List<Pedido> retornarPedidosPendentes(String cliente, String codigoPedido, String status, String idIntegracao, LocalDate data) {
