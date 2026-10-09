@@ -7,6 +7,8 @@ public record ProdutoRemovidoDTO(
         String codigoProduto,
         String cliente,
         String idIntegracao,
+        @Schema(description = "Rotina filtrada; nula quando o produto foi removido de todas as rotinas")
+        String rotina,
         @Schema(description = "Quantas linhas foram apagadas - uma por rotina em que o produto aparecia")
         int quantidadeRemovida
 ) {

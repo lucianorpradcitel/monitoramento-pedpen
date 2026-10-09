@@ -175,17 +175,32 @@ public class ProdutoService {
 
 
     /**
-     * Remove o produto do monitoramento. A chave é codigoProduto + cliente + idIntegracao:
-     * a rotina fica de fora de propósito, então o produto sai de TODAS as rotinas em que
-     * estiver registrado numa chamada só.
+     * Remove o produto do monitoramento. A chave é codigoProduto + cliente + idIntegracao e,
+     * opcionalmente, a rotina:
+     * <ul>
+     *   <li>rotina omitida (nula): o produto sai de TODAS as rotinas numa chamada só - o
+     *       comportamento original, usado pelo varredor das 5 tentativas;</li>
+     *   <li>rotina informada: sai só a linha daquela rotina, preservando o erro de outra rotina
+     *       do mesmo produto que ainda não foi resolvido.</li>
+     * </ul>
+     * Rotina presente mas em branco é recusada: quase sempre é expressão do n8n que avaliou
+     * vazia, e cair no "apaga tudo" levaria junto justamente os erros que o filtro quer poupar.
      *
      * @return quantas linhas foram apagadas; 0 quando nada casou com a chave
      */
     @Transactional
-    public int removerProduto(String codigoProduto, String cliente, String idIntegracao) {
-        int removidos = repository.removerTodasAsRotinas(codigoProduto, cliente, idIntegracao);
-        log.info("🗑️ Removido produto {} (cliente {}, integração {}) - {} linha(s)",
-                codigoProduto, cliente, idIntegracao, removidos);
+    public int removerProduto(String codigoProduto, String cliente, String idIntegracao, String rotina) {
+        if (rotina != null && !StringUtils.hasText(rotina)) {
+            throw new BusinessException(
+                    "rotina foi enviada em branco: omita o parâmetro para remover o produto de"
+                            + " todas as rotinas, ou informe a rotina a remover");
+        }
+
+        int removidos = rotina == null
+                ? repository.removerTodasAsRotinas(codigoProduto, cliente, idIntegracao)
+                : repository.removerDaRotina(codigoProduto, cliente, idIntegracao, rotina);
+        log.info("🗑️ Removido produto {} (cliente {}, integração {}, rotina {}) - {} linha(s)",
+                codigoProduto, cliente, idIntegracao, rotina == null ? "todas" : rotina, removidos);
         return removidos;
     }
 

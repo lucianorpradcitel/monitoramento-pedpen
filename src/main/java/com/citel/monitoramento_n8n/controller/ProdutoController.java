@@ -104,9 +104,17 @@ public class ProdutoController {
     @Operation(summary = "Remove um produto do monitoramento",
             description = """
                     Apaga definitivamente os registros de erro do produto. A chave é
-                    codigoProduto (PRO_CODITE) + idIntegracao (INT_CODAUT) + cliente (PRO_CLIENT):
-                    a rotina NÃO entra na chave, então o produto é removido de todas as rotinas
-                    em que aparecer, numa chamada só.
+                    codigoProduto (PRO_CODITE) + idIntegracao (INT_CODAUT) + cliente (PRO_CLIENT)
+                    e, opcionalmente, rotina (PRO_ROTINA):
+
+                    - sem `rotina`: o produto é removido de todas as rotinas em que aparecer,
+                      numa chamada só (comportamento original);
+                    - com `rotina`: sai só a linha daquela rotina, e o erro de outra rotina do
+                      mesmo produto continua no monitor. É a mesma rotina que o POST /produtos
+                      usa na chave.
+
+                    `rotina` enviada em branco (`?rotina=`) é recusada com 422, para que uma
+                    expressão vazia no n8n não caia no "remove de todas as rotinas".
 
                     A remoção é definitiva e não tem desfazer - não há endpoint que recrie o
                     registro.
@@ -119,6 +127,7 @@ public class ProdutoController {
                     content = { @Content(mediaType = "application/json",
                             schema = @Schema(implementation = ProdutoRemovidoDTO.class)) }),
             @ApiResponse(responseCode = "204", description = "Nenhuma linha casava com a chave - nada a remover"),
+            @ApiResponse(responseCode = "422", description = "rotina enviada em branco"),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @DeleteMapping()
@@ -128,15 +137,17 @@ public class ProdutoController {
             @Parameter(description = "INT_CODAUT - código da integração", required = true)
             @RequestParam String idIntegracao,
             @Parameter(description = "PRO_CLIENT - código do lojista", required = true)
-            @RequestParam String cliente
+            @RequestParam String cliente,
+            @Parameter(description = "PRO_ROTINA - opcional. Informada, remove só esta rotina; omitida, remove todas")
+            @RequestParam(required = false) String rotina
     ) {
-        int removidos = service.removerProduto(codigoProduto, cliente, idIntegracao);
+        int removidos = service.removerProduto(codigoProduto, cliente, idIntegracao, rotina);
         if (removidos == 0) {
             // Não é erro: o estado pedido (produto fora do monitoramento) já valia antes da
             // chamada. 204 mantém o DELETE idempotente para o n8n reprocessar sem tratar falha.
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(
-                new ProdutoRemovidoDTO(codigoProduto, cliente, idIntegracao, removidos));
+                new ProdutoRemovidoDTO(codigoProduto, cliente, idIntegracao, rotina, removidos));
     }
 }

@@ -42,4 +42,23 @@ public interface ProdutoRepository extends JpaRepository<Produto, String> {
     int removerTodasAsRotinas(@Param("codigoProduto") String codigoProduto,
                               @Param("cliente") String cliente,
                               @Param("idIntegracao") String idIntegracao);
+
+    /**
+     * Apaga o produto só na rotina informada, deixando intactos os erros das demais rotinas
+     * do mesmo produto.
+     *
+     * @return quantas linhas foram apagadas
+     */
+    @Modifying
+    @Query("""
+        DELETE FROM Produto p
+        WHERE p.codigoProduto = :codigoProduto
+          AND p.cliente = :cliente
+          AND p.idIntegracao = :idIntegracao
+          AND p.rotina = :rotina
+        """)
+    int removerDaRotina(@Param("codigoProduto") String codigoProduto,
+                        @Param("cliente") String cliente,
+                        @Param("idIntegracao") String idIntegracao,
+                        @Param("rotina") String rotina);
 }
