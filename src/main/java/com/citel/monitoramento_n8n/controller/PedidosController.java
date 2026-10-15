@@ -45,9 +45,8 @@ public class PedidosController {
         return ResponseEntity.ok(service.registrarPedido(request, cliente.getId()));
     }
     @PostMapping("pendentes-lote")
-    public ResponseEntity<List<Pedido>> registrarPedidoList(@RequestBody List<PedidoLoteDTO> request,
-                                                            @AuthenticationPrincipal Cliente cliente) {
-        return ResponseEntity.ok(service.registrarPedidosList(request, cliente.getId()));
+    public ResponseEntity<List<Pedido>> registrarPedidoList(@RequestBody List<PedidoLoteDTO> request) {
+        return ResponseEntity.ok(service.registrarPedidosList(request));
     }
 
 

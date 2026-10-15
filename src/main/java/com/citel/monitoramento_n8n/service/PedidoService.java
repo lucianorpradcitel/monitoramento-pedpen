@@ -61,16 +61,11 @@ public class PedidoService {
         return repository.save(pedido);
     }
 
-    public List<Pedido> registrarPedidosList(List<PedidoLoteDTO> listaPedidos, Long codigoCliente) {
+    public List<Pedido> registrarPedidosList(List<PedidoLoteDTO> listaPedidos) {
         List<String> clientes = listaPedidos.stream()
                 .map(PedidoLoteDTO::getCliente).distinct().toList();
         List<String> codigos = listaPedidos.stream()
                 .map(PedidoLoteDTO::getCodigoPedido).distinct().toList();
-
-        // Valida todos os códigos de integração do lote numa query só, antes de gravar qualquer
-        // coisa: se um deles não for do lojista, o lote inteiro é recusado.
-        integracaoService.resolverCodigosIntegracao(
-                listaPedidos.stream().map(PedidoLoteDTO::getIdIntegracao).toList(), codigoCliente);
 
         // Busca todos os existentes numa única query (evita N+1) e indexa por cliente|codigoPedido
         Map<String, Pedido> existentesPorChave = repository
@@ -90,7 +85,8 @@ public class PedidoService {
             if (novo) {
                 ped.setStatus(0);   // só define status quando é novo
             }
-            // Já validado acima; omitido, fica nulo.
+            // Gravado como veio, sem conferir na CADINT: o n8n autentica todas as capturas com o
+            // login de serviço, que não é o dono das integrações. Omitido, fica nulo.
             ped.setIdIntegracao(StringUtils.hasText(dto.getIdIntegracao()) ? dto.getIdIntegracao().trim() : null);
 
             log.info(novo ? "Pedido criado - {}" : "Pedido atualizado - {}", dto.getCodigoPedido());
