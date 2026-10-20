@@ -1,9 +1,7 @@
 package com.citel.monitoramento_n8n.service;
 
 import com.citel.monitoramento_n8n.exception.ConflictException;
-import com.citel.monitoramento_n8n.exception.ForbiddenException;
 import com.citel.monitoramento_n8n.exception.NotFoundException;
-import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.model.Usuario;
 import com.citel.monitoramento_n8n.repository.PedidosRepository;
@@ -19,15 +17,11 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Reprocessar volta o pedido com erro (2) para a fila (0), e só ele. O usuário interno reprocessa qualquer
- * pedido; o lojista, só os das integrações dele.
- */
+/** Reprocessar volta o pedido com erro (2) para a fila (0), e só ele. */
 @ExtendWith(MockitoExtension.class)
 class PedidoServiceReprocessarTest {
 
@@ -95,58 +89,6 @@ class PedidoServiceReprocessarTest {
         }
 
         verify(repository, never()).save(any());
-    }
-
-    @Test
-    void lojistaReprocessaPedidoDaPropriaIntegracao() {
-        Pedido pedido = pedidoComStatus(2);
-        pedido.setIdIntegracao("INT-1");
-        Cliente lojista = new Cliente("TODO TETO", "todoteto", "x");
-        when(integracaoService.pertenceAoLojista(eq("INT-1"), any())).thenReturn(true);
-        when(repository.save(any(Pedido.class))).thenAnswer(i -> i.getArgument(0));
-
-        Pedido salvo = service.reprocessar(pedido.getId(), lojista);
-
-        assertThat(salvo.getStatus()).isZero();
-        verify(repository).save(pedido);
-    }
-
-    @Test
-    void lojistaNaoReprocessaPedidoDeOutraIntegracao() {
-        Pedido pedido = pedidoComStatus(2);
-        pedido.setIdIntegracao("INT-DE-OUTRO");
-        Cliente lojista = new Cliente("TODO TETO", "todoteto", "x");
-        when(integracaoService.pertenceAoLojista(eq("INT-DE-OUTRO"), any())).thenReturn(false);
-
-        assertThatThrownBy(() -> service.reprocessar(pedido.getId(), lojista))
-                .isInstanceOf(ForbiddenException.class);
-
-        assertThat(pedido.getStatus()).isEqualTo(2);
-        verify(repository, never()).save(any());
-    }
-
-    @Test
-    void lojistaNaoReprocessaPedidoSemIntegracao() {
-        Pedido pedido = pedidoComStatus(2);
-        Cliente lojista = new Cliente("TODO TETO", "todoteto", "x");
-        when(integracaoService.pertenceAoLojista(any(), any())).thenReturn(false);
-
-        assertThatThrownBy(() -> service.reprocessar(pedido.getId(), lojista))
-                .isInstanceOf(ForbiddenException.class);
-
-        verify(repository, never()).save(any());
-    }
-
-    @Test
-    void usuarioInternoNaoPrecisaSerDonoDaIntegracao() {
-        Pedido pedido = pedidoComStatus(2);
-        pedido.setIdIntegracao("QUALQUER");
-        when(repository.save(any(Pedido.class))).thenAnswer(i -> i.getArgument(0));
-
-        service.reprocessar(pedido.getId(), admin);
-
-        verify(integracaoService, never()).pertenceAoLojista(any(), any());
-        verify(repository).save(pedido);
     }
 
     @Test

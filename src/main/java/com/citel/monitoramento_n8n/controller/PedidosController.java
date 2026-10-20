@@ -4,11 +4,11 @@ import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
 import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Pedido;
+import com.citel.monitoramento_n8n.model.Usuario;
 import com.citel.monitoramento_n8n.service.PedidoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -68,29 +68,27 @@ public class PedidosController {
         return ResponseEntity.ok(service.retornarPedidosPendentes(cliente, codigoPedido, status, idIntegracao, data));
     }
 
-    @Operation(summary = "Reprocessa um pedido com erro (usuário interno ou lojista)",
+    @Operation(summary = "Reprocessa um pedido com erro (usuário interno, admin ou comum)",
             description = """
                     Devolve o pedido à fila: o status volta a 0, que é o que o n8n busca para \
                     processar de novo. Só pedidos com erro (status 2) podem ser reprocessados; \
                     em qualquer outro status a resposta é 409. O sequencialProcessamento não muda.
 
-                    Qualquer usuário interno (admin ou comum) reprocessa qualquer pedido. O lojista só \
-                    reprocessa pedidos das integrações dele (403 nos demais, inclusive pedido sem \
-                    integração). Sem login ou com outra credencial, 403. O id vem no corpo do \
-                    GET /pedidos e do GET /pendentes.""")
+                    Qualquer usuário interno (perfil ADMIN ou USUARIO) pode; o lojista e quem não \
+                    está logado recebem 403. O id vem no corpo do GET /pedidos e do GET /pendentes.""")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Pedido de volta à fila (status 0)",
                     content = { @Content(mediaType = "application/json",
                             schema = @Schema(implementation = Pedido.class)) }),
-            @ApiResponse(responseCode = "403", description = "Sem login válido, ou pedido de outro lojista"),
+            @ApiResponse(responseCode = "403", description = "Não é um usuário interno (lojista ou sem login)"),
             @ApiResponse(responseCode = "404", description = "Pedido inexistente"),
             @ApiResponse(responseCode = "409", description = "O pedido não está com erro"),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @PatchMapping("/pedidos/{id}/reprocessar")
     public ResponseEntity<Pedido> reprocessarPedido(@PathVariable String id,
-                                                    @AuthenticationPrincipal UserDetails quem) {
-        return ResponseEntity.ok(service.reprocessar(id, quem));
+                                                    @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(service.reprocessar(id, usuario));
     }
 
     @Operation(summary = "Lista pedidos filtrando por um ou mais status",
