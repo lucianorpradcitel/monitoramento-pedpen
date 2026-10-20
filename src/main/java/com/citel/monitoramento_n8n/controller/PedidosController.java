@@ -68,19 +68,19 @@ public class PedidosController {
         return ResponseEntity.ok(service.retornarPedidosPendentes(cliente, codigoPedido, status, idIntegracao, data));
     }
 
-    @Operation(summary = "Reprocessa um pedido com erro (somente ADMIN)",
+    @Operation(summary = "Reprocessa um pedido com erro (usuário interno, admin ou comum)",
             description = """
                     Devolve o pedido à fila: o status volta a 0, que é o que o n8n busca para \
                     processar de novo. Só pedidos com erro (status 2) podem ser reprocessados; \
                     em qualquer outro status a resposta é 409. O sequencialProcessamento não muda.
 
-                    Só usuário interno com perfil ADMIN: usuário comum e lojista recebem 403. O id \
-                    vem no corpo do GET /pedidos e do GET /pendentes.""")
+                    Qualquer usuário interno (perfil ADMIN ou USUARIO) pode; o lojista e quem não \
+                    está logado recebem 403. O id vem no corpo do GET /pedidos e do GET /pendentes.""")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Pedido de volta à fila (status 0)",
                     content = { @Content(mediaType = "application/json",
                             schema = @Schema(implementation = Pedido.class)) }),
-            @ApiResponse(responseCode = "403", description = "Não é um usuário interno ADMIN"),
+            @ApiResponse(responseCode = "403", description = "Não é um usuário interno (lojista ou sem login)"),
             @ApiResponse(responseCode = "404", description = "Pedido inexistente"),
             @ApiResponse(responseCode = "409", description = "O pedido não está com erro"),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")

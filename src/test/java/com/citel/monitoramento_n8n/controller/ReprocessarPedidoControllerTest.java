@@ -31,8 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * PATCH /pedidos/{id}/reprocessar: só usuário interno ADMIN. A barreira é do servidor — o botão
- * escondido no portal não protege nada contra Swagger/Postman.
+ * PATCH /pedidos/{id}/reprocessar: qualquer usuário interno (admin ou comum). Lojista e quem não está
+ * logado levam 403. A barreira é do servidor — o botão escondido no portal não protege nada contra
+ * Swagger/Postman.
  */
 @WebMvcTest(controllers = PedidosController.class)
 @Import({SecurityConfigurations.class, SecurityFilter.class})
@@ -89,11 +90,14 @@ class ReprocessarPedidoControllerTest {
     }
 
     @Test
-    void usuarioComumLevaForbidden() throws Exception {
-        mvc.perform(patch("/pedidos/abc/reprocessar").with(user(comum)))
-                .andExpect(status().isForbidden());
+    void usuarioComumTambemReprocessa() throws Exception {
+        when(service.reprocessar(eq(pedido.getId()), any(Usuario.class))).thenReturn(pedido);
 
-        verifyNoInteractions(service);
+        mvc.perform(patch("/pedidos/" + pedido.getId() + "/reprocessar").with(user(comum)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(0));
+
+        verify(service).reprocessar(eq(pedido.getId()), any(Usuario.class));
     }
 
     @Test
