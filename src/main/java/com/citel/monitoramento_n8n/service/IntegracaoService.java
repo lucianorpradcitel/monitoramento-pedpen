@@ -283,6 +283,14 @@ public class IntegracaoService {
      * checagem um lojista poderia carimbar os próprios erros com o código de outro.
      */
     @Transactional(readOnly = true)
+    /** A integração informada é deste lojista? Código vazio nunca é: não há como provar o dono. */
+    public boolean pertenceAoLojista(String codigoIntegracao, Long codigoCliente) {
+        if (!StringUtils.hasText(codigoIntegracao) || codigoCliente == null) {
+            return false;
+        }
+        return !repository.filtrarCodigosDoCliente(codigoCliente, Set.of(codigoIntegracao.trim())).isEmpty();
+    }
+
     public String resolverCodigoIntegracao(String codigoInformado, Long codigoCliente) {
         if (!StringUtils.hasText(codigoInformado)) {
             return null;

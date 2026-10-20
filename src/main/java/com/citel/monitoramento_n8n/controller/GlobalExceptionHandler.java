@@ -2,6 +2,7 @@ package com.citel.monitoramento_n8n.controller;
 
 import com.citel.monitoramento_n8n.exception.BusinessException;
 import com.citel.monitoramento_n8n.exception.ConflictException;
+import com.citel.monitoramento_n8n.exception.ForbiddenException;
 import com.citel.monitoramento_n8n.exception.NotFoundException;
 import com.citel.monitoramento_n8n.exception.UnauthorizedException;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleNaoAutorizado(UnauthorizedException e) {
         log.warn("Requisição não autorizada: {}", e.getMessage());
         return corpo(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> handleProibido(ForbiddenException e) {
+        log.warn("Acesso negado: {}", e.getMessage());
+        return corpo(HttpStatus.FORBIDDEN, e.getMessage());
     }
 
     @ExceptionHandler(NotFoundException.class)

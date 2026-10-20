@@ -3,11 +3,14 @@ package com.citel.monitoramento_n8n.service;
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
 import com.citel.monitoramento_n8n.exception.ConflictException;
+import com.citel.monitoramento_n8n.exception.ForbiddenException;
 import com.citel.monitoramento_n8n.exception.NotFoundException;
+import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.model.Usuario;
 import com.citel.monitoramento_n8n.repository.PedidosRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -102,11 +105,20 @@ public class PedidoService {
      * finalizado, reprocessado, poderia ser gravado em duplicidade no ERP.
      *
      * O sequencialProcessamento não é tocado — quem o incrementa é o reenvio do pedido pelo n8n.
+     *
+     * Quem chama é um usuário interno (admin ou comum) ou um lojista. O interno vê todos os pedidos; o
+     * lojista só reprocessa os das integrações dele (pela integração do pedido) — o resto é 403, antes de
+     * qualquer alteração. Pedido sem integração não tem como provar o dono e também é 403 para o lojista.
      */
     @Transactional
-    public Pedido reprocessar(String id, Usuario usuario) {
+    public Pedido reprocessar(String id, UserDetails quem) {
         Pedido pedido = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Pedido não encontrado: " + id));
+
+        if (quem instanceof Cliente lojista
+                && !integracaoService.pertenceAoLojista(pedido.getIdIntegracao(), lojista.getId())) {
+            throw new ForbiddenException("Este pedido não pertence ao lojista autenticado.");
+        }
 
         if (pedido.getStatus() != STATUS_ERRO) {
             throw new ConflictException("Só pedidos com erro (status " + STATUS_ERRO
@@ -119,8 +131,19 @@ public class PedidoService {
 
         log.info("Pedido reprocessado - pedido: {}, lojista: {}, plataforma: {}, por: {}",
                 salvo.getCodigoPedido(), salvo.getCliente(), salvo.getPlataforma(),
-                StringUtils.hasText(usuario.getNome()) ? usuario.getNome() : usuario.getEmail());
+                quemReprocessou(quem));
         return salvo;
+    }
+
+    /** Nome de quem reprocessou para o log: o nome, ou o e-mail/login quando não houver. */
+    private static String quemReprocessou(UserDetails quem) {
+        if (quem instanceof Usuario usuario && StringUtils.hasText(usuario.getNome())) {
+            return usuario.getNome();
+        }
+        if (quem instanceof Cliente lojista && StringUtils.hasText(lojista.getNome())) {
+            return lojista.getNome();
+        }
+        return quem.getUsername();
     }
 
     public List<Pedido> retornarPedidosPendentes(String cliente, String codigoPedido, String status, String idIntegracao, LocalDate data) {
