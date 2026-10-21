@@ -36,7 +36,6 @@ public class PedidoLoteDTO {
         pd.setPlataforma(dto.getPlataforma());
         pd.setDataPedido(dto.getDataPedido());
         pd.setUltimaAlteracao(LocalDateTime.now());
-        pd.setSequencialProcessamento(pd.getSequencialProcessamento() + 1);
 
         return pd;
     }

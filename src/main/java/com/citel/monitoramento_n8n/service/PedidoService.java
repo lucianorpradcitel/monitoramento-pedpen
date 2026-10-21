@@ -38,12 +38,14 @@ public class PedidoService {
 
     public Pedido registrarPedido(PedidoDTO pedidoComErro, Long codigoCliente) {
 
-        Pedido pedido = repository.findByCodigoPedidoAndCliente(
+        Pedido existente = repository.findByCodigoPedidoAndCliente(
                         pedidoComErro.getCodigoPedido(),
                         pedidoComErro.getCliente())
                 .stream()
                 .findFirst()
-                .orElse(new Pedido());
+                .orElse(null);
+        boolean novo = existente == null;
+        Pedido pedido = novo ? new Pedido() : existente;
 
         // Atualiza ou seta os valores
         pedido.setStatus(pedidoComErro.getStatus());
@@ -57,6 +59,12 @@ public class PedidoService {
         pedido.setIdIntegracao(
                 integracaoService.resolverCodigoIntegracao(pedidoComErro.getIdIntegracao(), codigoCliente));
         pedido.setRotina(pedidoComErro.getRotina());
+        // Cada nova tentativa de gravar o pedido com erro conta como um processamento. Só este
+        // endpoint incrementa: o lote (registrarPedidosList) não mexe no sequencial. Pedido
+        // novo já nasce com 1 (default da entidade).
+        if (!novo) {
+            pedido.setSequencialProcessamento(pedido.getSequencialProcessamento() + 1);
+        }
 
         return repository.save(pedido);
     }

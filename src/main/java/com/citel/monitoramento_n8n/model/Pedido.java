@@ -30,7 +30,9 @@ public class Pedido {
     @Column(name="PEN_DTAINS", insertable = false, updatable = false)
     private LocalDateTime dataInsercao;
     @Column(name="PEN_SEQPRC")
-    private int sequencialProcessamento;
+    // Espelha o DEFAULT 1 da PEN_SEQPRC: o Hibernate grava o campo explicitamente no INSERT,
+    // então sem isso um pedido novo entraria com 0.
+    private int sequencialProcessamento = 1;
     @Column(name="PEN_ID_INT")
     private String idIntegracao;
     @Column(name="PEN_ROTINA")
