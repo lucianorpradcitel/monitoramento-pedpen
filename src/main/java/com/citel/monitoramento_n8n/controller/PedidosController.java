@@ -2,7 +2,6 @@ package com.citel.monitoramento_n8n.controller;
 
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
-import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.model.Usuario;
 import com.citel.monitoramento_n8n.service.PedidoService;
@@ -40,9 +39,8 @@ public class PedidosController {
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @PostMapping("/pendentes")
-    public ResponseEntity<Pedido> registrarPedido(@RequestBody PedidoDTO request,
-                                                  @AuthenticationPrincipal Cliente cliente) {
-        return ResponseEntity.ok(service.registrarPedido(request, cliente.getId()));
+    public ResponseEntity<Pedido> registrarPedido(@RequestBody PedidoDTO request) {
+        return ResponseEntity.ok(service.registrarPedido(request));
     }
     @PostMapping("pendentes-lote")
     public ResponseEntity<List<Pedido>> registrarPedidoList(@RequestBody List<PedidoLoteDTO> request) {

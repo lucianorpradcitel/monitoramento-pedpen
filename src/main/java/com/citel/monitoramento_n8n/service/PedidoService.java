@@ -29,14 +29,12 @@ public class PedidoService {
     static final int STATUS_ERRO = 2;
 
     private final PedidosRepository repository;
-    private final IntegracaoService integracaoService;
 
-    public PedidoService(PedidosRepository repository, IntegracaoService integracaoService) {
+    public PedidoService(PedidosRepository repository) {
         this.repository = repository;
-        this.integracaoService = integracaoService;
     }
 
-    public Pedido registrarPedido(PedidoDTO pedidoComErro, Long codigoCliente) {
+    public Pedido registrarPedido(PedidoDTO pedidoComErro) {
 
         Pedido existente = repository.findByCodigoPedidoAndCliente(
                         pedidoComErro.getCodigoPedido(),
@@ -53,11 +51,9 @@ public class PedidoService {
         pedido.setErro(pedidoComErro.getErro());
         pedido.setCliente(pedidoComErro.getCliente());
         pedido.setPlataforma(pedidoComErro.getPlataforma());
-        // Vem do payload e é conferido contra a CADINT do lojista autenticado. Omitido, fica nulo
-        // — o CADCLI.CLI_CODAUT não serve mais como origem: é um valor por lojista e não distingue
-        // as N integrações que um lojista pode ter.
-        pedido.setIdIntegracao(
-                integracaoService.resolverCodigoIntegracao(pedidoComErro.getIdIntegracao(), codigoCliente));
+        // Gravado como veio, sem conferir na CADINT: o n8n autentica com o login de serviço, que
+        // não é o dono das integrações. Omitido, fica nulo.
+        pedido.setIdIntegracao(normalizarIdIntegracao(pedidoComErro.getIdIntegracao()));
         pedido.setRotina(pedidoComErro.getRotina());
         // Cada nova tentativa de gravar o pedido com erro conta como um processamento. Só este
         // endpoint incrementa: o lote (registrarPedidosList) não mexe no sequencial. Pedido
@@ -95,7 +91,7 @@ public class PedidoService {
             }
             // Gravado como veio, sem conferir na CADINT: o n8n autentica todas as capturas com o
             // login de serviço, que não é o dono das integrações. Omitido, fica nulo.
-            ped.setIdIntegracao(StringUtils.hasText(dto.getIdIntegracao()) ? dto.getIdIntegracao().trim() : null);
+            ped.setIdIntegracao(normalizarIdIntegracao(dto.getIdIntegracao()));
 
             log.info(novo ? "Pedido criado - {}" : "Pedido atualizado - {}", dto.getCodigoPedido());
             listaPed.add(ped);
@@ -183,5 +179,10 @@ public class PedidoService {
 
     private static String chave(String cliente, String codigoPedido) {
         return cliente + "|" + codigoPedido;
+    }
+
+    /** PEN_ID_INT como veio no payload, sem espaços; vazio ou omitido vira nulo. */
+    private static String normalizarIdIntegracao(String idIntegracao) {
+        return StringUtils.hasText(idIntegracao) ? idIntegracao.trim() : null;
     }
 }

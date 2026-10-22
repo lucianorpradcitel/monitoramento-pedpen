@@ -13,7 +13,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -28,15 +27,13 @@ class ProdutoServiceUpsertTest {
 
     @Mock
     ProdutoRepository repository;
-    @Mock
-    IntegracaoService integracaoService;
 
     ProdutoService service;
     Produto existente;
 
     @BeforeEach
     void preparar() {
-        service = new ProdutoService(repository, integracaoService);
+        service = new ProdutoService(repository);
 
         existente = new Produto();
         existente.setCodigoProduto("04464");
@@ -61,13 +58,12 @@ class ProdutoServiceUpsertTest {
         existente.setLibera("N");
         existente.setErro("Produto 04464: corrija o peso no cadastro do ERP. - REMOVIDO DA LIBERACAO");
 
-        Produto salvo = service.registrarProduto(post(MSG_NOVA, null), 1L);
+        Produto salvo = service.registrarProduto(post(MSG_NOVA, null));
 
         assertThat(salvo.getMensagemErro()).isEqualTo(MSG_NOVA + " - REMOVIDO DA LIBERACAO");
         assertThat(salvo.getLibera()).isEqualTo("N");
         assertThat(salvo.getTentativa()).isEqualTo(3187);
         // Registro existente não revalida a integração: o 422 de lojista não se aplica aqui.
-        verifyNoInteractions(integracaoService);
     }
 
     @Test
@@ -75,7 +71,7 @@ class ProdutoServiceUpsertTest {
         existente.setLibera("N");
         existente.setErro(MSG_NOVA + " - REMOVIDO DA LIBERACAO");
 
-        Produto salvo = service.registrarProduto(post(MSG_NOVA, "N"), 1L);
+        Produto salvo = service.registrarProduto(post(MSG_NOVA, "N"));
 
         assertThat(salvo.getMensagemErro()).isEqualTo(MSG_NOVA + " - REMOVIDO DA LIBERACAO");
     }
@@ -84,7 +80,7 @@ class ProdutoServiceUpsertTest {
     void transicaoParaNCarimbaAMensagemNova() {
         existente.setErro("Produto 04464: corrija o peso no cadastro do ERP.");
 
-        Produto salvo = service.registrarProduto(post(MSG_NOVA, "n"), 1L);
+        Produto salvo = service.registrarProduto(post(MSG_NOVA, "n"));
 
         assertThat(salvo.getMensagemErro()).isEqualTo(MSG_NOVA + " - REMOVIDO DA LIBERACAO");
         assertThat(salvo.getLibera()).isEqualTo("N");
@@ -94,7 +90,7 @@ class ProdutoServiceUpsertTest {
     void produtoLiberadoSoTrocaMensagem() {
         existente.setErro("Produto 04464: corrija o peso no cadastro do ERP.");
 
-        Produto salvo = service.registrarProduto(post(MSG_NOVA, null), 1L);
+        Produto salvo = service.registrarProduto(post(MSG_NOVA, null));
 
         assertThat(salvo.getMensagemErro()).isEqualTo(MSG_NOVA);
         assertThat(salvo.getLibera()).isNull();
@@ -104,7 +100,7 @@ class ProdutoServiceUpsertTest {
     void mensagemVaziaMantemAGravada() {
         existente.setErro("Produto 04464: corrija o peso no cadastro do ERP.");
 
-        Produto salvo = service.registrarProduto(post("  ", null), 1L);
+        Produto salvo = service.registrarProduto(post("  ", null));
 
         assertThat(salvo.getMensagemErro()).isEqualTo("Produto 04464: corrija o peso no cadastro do ERP.");
         assertThat(salvo.getTentativa()).isEqualTo(3187);

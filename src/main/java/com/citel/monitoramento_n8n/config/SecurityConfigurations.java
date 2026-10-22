@@ -36,13 +36,14 @@ public class SecurityConfigurations {
                     req.requestMatchers(HttpMethod.POST, "/cadastro").permitAll();
                     req.requestMatchers("/doc**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll();
 
-                    // Estes recebem @AuthenticationPrincipal Cliente e resolvem a integração pelo
-                    // lojista autenticado. Um usuário interno (CADUSR) não é Cliente: sem esta
-                    // restrição o argumento chegaria nulo e o endpoint quebraria com 500.
+                    // Registro de erros e capturas: só token de lojista, que é o login do n8n.
+                    // Usuário interno (CADUSR) leva 403. O idIntegracao do payload NÃO é conferido
+                    // contra o lojista do token: o n8n usa o login de serviço da Citel, que não é
+                    // dono das integrações, e o código é gravado como veio.
                     //
                     // Atenção aos caminhos: PedidosController não declara @RequestMapping de
                     // classe, então cada rota vive na raiz: POST /pendentes e /pendentes-lote,
-                    // GET /pendentes e GET /pedidos. Só os POSTs precisam do Cliente autenticado;
+                    // GET /pendentes e GET /pedidos. Só os POSTs ficam restritos ao lojista;
                     // os GETs ficam no anyRequest().authenticated() abaixo.
                     req.requestMatchers(HttpMethod.POST, "/produtos", "/produtos/lote",
                             "/pendentes", "/pendentes-lote").hasRole("LOJISTA");

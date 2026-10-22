@@ -32,7 +32,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Registry de tenants da integração multi-tenant.
@@ -271,28 +270,6 @@ public class IntegracaoService {
         return repository.findByCodigoIntegracaoAndCodigoCliente(codigoIntegracao, codigoCliente)
                 .orElseThrow(() -> new NotFoundException("Integração não encontrada com o código "
                         + codigoIntegracao + " para o lojista " + codigoCliente));
-    }
-
-    /**
-     * Confere que o código informado no payload é de uma integração deste lojista, e devolve o
-     * valor a gravar em PRO_ID_INT/PEN_ID_INT.
-     *
-     * Código omitido devolve null: quem ainda não manda o campo grava nulo, de propósito. Sem essa
-     * checagem um lojista poderia carimbar os próprios erros com o código de outro.
-     */
-    @Transactional(readOnly = true)
-    public String resolverCodigoIntegracao(String codigoInformado, Long codigoCliente) {
-        if (!StringUtils.hasText(codigoInformado)) {
-            return null;
-        }
-
-        String codigo = codigoInformado.trim();
-        if (repository.filtrarCodigosDoCliente(codigoCliente, Set.of(codigo)).isEmpty()) {
-            throw new BusinessException("A integração " + codigo
-                    + " não existe ou não pertence ao lojista autenticado.");
-        }
-
-        return codigo;
     }
 
     private List<Integracao> buscar(String plataforma, String ativo, String slug) {

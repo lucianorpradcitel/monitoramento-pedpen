@@ -27,15 +27,13 @@ class PedidoServiceReprocessarTest {
 
     @Mock
     PedidosRepository repository;
-    @Mock
-    IntegracaoService integracaoService;
 
     PedidoService service;
     Usuario admin;
 
     @BeforeEach
     void preparar() {
-        service = new PedidoService(repository, integracaoService);
+        service = new PedidoService(repository);
         admin = new Usuario();
         admin.setEmail("gabriel@citelsoftware.com.br");
         admin.setNome("Gabriel Beraldo");

@@ -24,14 +24,12 @@ class PedidoServiceRegistrarTest {
 
     @Mock
     PedidosRepository repository;
-    @Mock
-    IntegracaoService integracaoService;
 
     PedidoService service;
 
     @BeforeEach
     void preparar() {
-        service = new PedidoService(repository, integracaoService);
+        service = new PedidoService(repository);
         lenient().when(repository.save(any(Pedido.class))).thenAnswer(i -> i.getArgument(0));
     }
 
@@ -48,7 +46,7 @@ class PedidoServiceRegistrarTest {
     void pedidoNovoComecaNoSequencialUm() {
         when(repository.findByCodigoPedidoAndCliente(anyString(), anyString())).thenReturn(List.of());
 
-        Pedido salvo = service.registrarPedido(dto(), 1L);
+        Pedido salvo = service.registrarPedido(dto());
 
         assertThat(salvo.getSequencialProcessamento()).isEqualTo(1);
     }
@@ -59,7 +57,7 @@ class PedidoServiceRegistrarTest {
         existente.setSequencialProcessamento(70);
         when(repository.findByCodigoPedidoAndCliente(anyString(), anyString())).thenReturn(List.of(existente));
 
-        Pedido salvo = service.registrarPedido(dto(), 1L);
+        Pedido salvo = service.registrarPedido(dto());
 
         assertThat(salvo.getSequencialProcessamento()).isEqualTo(71);
     }

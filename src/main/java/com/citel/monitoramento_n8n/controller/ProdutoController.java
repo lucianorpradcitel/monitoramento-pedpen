@@ -4,12 +4,10 @@ package com.citel.monitoramento_n8n.controller;
 import com.citel.monitoramento_n8n.DTO.ProdutoDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoLoteDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoRemovidoDTO;
-import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Produto;
 import com.citel.monitoramento_n8n.service.ProdutoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -50,9 +48,8 @@ public class ProdutoController {
     })
 
     @PostMapping
-    public ResponseEntity<Produto> registrarProduto(@RequestBody ProdutoDTO request,
-                                                    @AuthenticationPrincipal Cliente cliente) {
-        return ResponseEntity.ok(service.registrarProduto(request, cliente.getId()));
+    public ResponseEntity<Produto> registrarProduto(@RequestBody ProdutoDTO request) {
+        return ResponseEntity.ok(service.registrarProduto(request));
     }
 
     @Operation(summary = "Registra uma lista de produtos no monitoramento de erros de integração",

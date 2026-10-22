@@ -36,7 +36,7 @@ public class PedidoDTO {
 
     /**
      * INT_CODAUT da integração que está reportando. Opcional: omitido, PEN_ID_INT fica nulo.
-     * O service confere que o código pertence ao lojista autenticado antes de gravar.
+     * Gravado como veio, sem conferir na CADINT.
      */
     @Setter
     @Schema(description = "Código da integração (CADINT.INT_CODAUT). Opcional.")

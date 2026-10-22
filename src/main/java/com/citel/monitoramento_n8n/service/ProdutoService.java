@@ -35,14 +35,12 @@ public class ProdutoService {
     private static final String MARCA_REMOCAO = "REMOVIDO DA LIBERACAO";
 
     private final ProdutoRepository repository;
-    private final IntegracaoService integracaoService;
 
-    public ProdutoService(ProdutoRepository repository, IntegracaoService integracaoService) {
+    public ProdutoService(ProdutoRepository repository) {
 
         this.repository = repository;
-        this.integracaoService = integracaoService;
     }
-    public Produto registrarProduto(ProdutoDTO produtoDTO, Long codigoCliente) {
+    public Produto registrarProduto(ProdutoDTO produtoDTO) {
 
        Optional<Produto> produtoComErro =  repository.findByCodigoProdutoAndClienteAndRotina(produtoDTO.codigoProduto(), produtoDTO.cliente(), produtoDTO.rotina())
                .stream().findFirst();
@@ -61,11 +59,9 @@ public class ProdutoService {
                     : produtoDTO.mensagemErro());
             novoProduto.setCliente(produtoDTO.cliente());
             novoProduto.setPlataforma(produtoDTO.plataforma());
-            // Vem do payload e é conferido contra a CADINT do lojista autenticado.
-            // Omitido, fica nulo — o CADCLI.CLI_CODAUT não serve mais como origem: ele é um
-            // valor por lojista e não distingue as N integrações que um lojista pode ter.
-            novoProduto.setIdIntegracao(
-                    integracaoService.resolverCodigoIntegracao(produtoDTO.idIntegracao(), codigoCliente));
+            // Gravado como veio, sem conferir na CADINT: o n8n autentica com o login de serviço,
+            // que não é o dono das integrações. Omitido, fica nulo.
+            novoProduto.setIdIntegracao(normalizarIdIntegracao(produtoDTO.idIntegracao()));
             novoProduto.setRotina(produtoDTO.rotina());
             return repository.save(novoProduto);
         }
@@ -162,7 +158,7 @@ public class ProdutoService {
             }
             // Gravado como veio, sem conferir na CADINT: o n8n autentica o lote com o login de
             // serviço, que não é o dono das integrações. Omitido, fica nulo.
-            pro.setIdIntegracao(StringUtils.hasText(dto.getIdIntegracao()) ? dto.getIdIntegracao().trim() : null);
+            pro.setIdIntegracao(normalizarIdIntegracao(dto.getIdIntegracao()));
 
             log.info(novo ? "Produto criado - {} (tentativa {})" : "Produto atualizado - {} (tentativa {})",
                     dto.getCodigoProduto(), pro.getTentativa());
@@ -250,6 +246,11 @@ public class ProdutoService {
      */
     private static String normalizarLibera(String libera) {
         return StringUtils.hasText(libera) ? libera.trim().toUpperCase() : null;
+    }
+
+    /** PRO_ID_INT como veio no payload, sem espaços; vazio ou omitido vira nulo. */
+    private static String normalizarIdIntegracao(String idIntegracao) {
+        return StringUtils.hasText(idIntegracao) ? idIntegracao.trim() : null;
     }
 
     private static boolean removidoDaLiberacao(String libera) {

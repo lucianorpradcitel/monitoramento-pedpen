@@ -30,14 +30,12 @@ class ProdutoServiceLoteTest {
 
     @Mock
     ProdutoRepository repository;
-    @Mock
-    IntegracaoService integracaoService;
 
     ProdutoService service;
 
     @BeforeEach
     void preparar() {
-        service = new ProdutoService(repository, integracaoService);
+        service = new ProdutoService(repository);
         lenient().when(repository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -123,7 +121,6 @@ class ProdutoServiceLoteTest {
         List<Produto> salvos = service.registrarProdutosList(List.of(dto));
 
         assertThat(salvos.get(0).getIdIntegracao()).isEqualTo("0000008");
-        verifyNoInteractions(integracaoService);
     }
 
     @Test
@@ -174,6 +171,6 @@ class ProdutoServiceLoteTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("0 ou 1");
 
-        verifyNoInteractions(repository, integracaoService);
+        verifyNoInteractions(repository);
     }
 }

@@ -27,14 +27,12 @@ class ProdutoServiceRemocaoTest {
 
     @Mock
     ProdutoRepository repository;
-    @Mock
-    IntegracaoService integracaoService;
 
     ProdutoService service;
 
     @BeforeEach
     void preparar() {
-        service = new ProdutoService(repository, integracaoService);
+        service = new ProdutoService(repository);
     }
 
     @Test
