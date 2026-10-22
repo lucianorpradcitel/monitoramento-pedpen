@@ -30,11 +30,9 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Registry de tenants da integração multi-tenant.
@@ -295,34 +293,6 @@ public class IntegracaoService {
         }
 
         return codigo;
-    }
-
-    /**
-     * Versão em lote: valida todos os códigos distintos numa query só e devolve os aceitos.
-     * Um lote pode misturar integrações do mesmo lojista, então a chave é por código.
-     */
-    @Transactional(readOnly = true)
-    public Set<String> resolverCodigosIntegracao(Collection<String> codigosInformados, Long codigoCliente) {
-        Set<String> codigos = codigosInformados.stream()
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .collect(Collectors.toSet());
-
-        if (codigos.isEmpty()) {
-            return Set.of();
-        }
-
-        Set<String> validos = Set.copyOf(repository.filtrarCodigosDoCliente(codigoCliente, codigos));
-
-        if (validos.size() != codigos.size()) {
-            String invalidos = codigos.stream()
-                    .filter(c -> !validos.contains(c))
-                    .sorted()
-                    .collect(Collectors.joining(", "));
-            throw new BusinessException("Integração não encontrada para o lojista autenticado: " + invalidos);
-        }
-
-        return validos;
     }
 
     private List<Integracao> buscar(String plataforma, String ativo, String slug) {

@@ -19,17 +19,19 @@ public class PedidoLoteDTO {
     private LocalDateTime dataPedido;
     @Schema(hidden = true)
     private LocalDateTime ultimaAlteracao;
+    // Ignorado: o lote não mexe no sequencial (só o POST /pendentes incrementa).
+    @Schema(hidden = true)
     private int sequencialProcessamento;
 
     /**
      * INT_CODAUT da integração que está reportando. Opcional: omitido, PEN_ID_INT fica nulo.
-     * O service confere que o código pertence ao lojista autenticado antes de gravar.
+     * Gravado como veio, sem conferir na CADINT: o n8n autentica a captura com o login de
+     * serviço, que não é o dono das integrações.
      */
     @Schema(description = "Código da integração (CADINT.INT_CODAUT). Opcional.")
     private String idIntegracao;
 
-    // idIntegracao não entra aqui de propósito: quem grava é o service, depois de validar
-    // o código contra a CADINT do lojista autenticado.
+    // idIntegracao não entra aqui: o service grava depois, já normalizado (vazio vira nulo).
     public static Pedido converterDTO(PedidoLoteDTO dto, Pedido pd) {
         pd.setCliente(dto.getCliente());
         pd.setCodigoPedido(dto.getCodigoPedido());

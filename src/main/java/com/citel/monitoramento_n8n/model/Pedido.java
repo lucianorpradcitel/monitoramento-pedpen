@@ -1,6 +1,5 @@
 package com.citel.monitoramento_n8n.model;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -25,7 +24,6 @@ public class Pedido {
     @Column(name="PEN_DTAPED", updatable = false)
     private LocalDateTime dataPedido;
     @Column(name="PEN_DHUALT")
-    @Schema(hidden = true)
     private LocalDateTime ultimaAlteracao;
     @Column(name="PEN_DTAINS", insertable = false, updatable = false)
     private LocalDateTime dataInsercao;

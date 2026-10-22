@@ -18,8 +18,8 @@ public class PedidoDTO {
     private String erro;
     @Setter
     private String plataforma;
-    // status permanece sem setter de propósito: mantém o comportamento atual
-    // (o valor vindo do JSON não é populado; o service decide o status).
+    // Sem setter, mas o JSON preenche mesmo assim: como há getter, o Jackson usa o campo privado
+    // para gravar. O service copia esse valor para o pedido, então o status enviado é o que vale.
     private int status;
     @Setter
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -27,7 +27,9 @@ public class PedidoDTO {
     @Setter
     @Schema(hidden = true)
     private LocalDateTime ultimaAlteracao;
+    // Ignorado: o service calcula o sequencial a partir do que está gravado.
     @Setter
+    @Schema(hidden = true)
     private int sequencialProcessamento;
     @Setter
     private String rotina;

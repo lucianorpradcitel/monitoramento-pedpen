@@ -55,7 +55,7 @@ public class PedidosController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de pedidos pendentes encontrada",
                     content = { @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Pedido.class)) }),
+                            array = @ArraySchema(schema = @Schema(implementation = Pedido.class))) }),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @GetMapping("/pendentes")

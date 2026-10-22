@@ -17,13 +17,24 @@ public class ProdutoLoteDTO {
 
     /**
      * INT_CODAUT da integração que está reportando. Opcional: omitido, PRO_ID_INT fica nulo.
-     * O service confere que o código pertence ao lojista autenticado antes de gravar.
+     * Gravado como veio, sem conferir na CADINT: o n8n autentica o lote com o login de serviço,
+     * que não é o dono das integrações.
      */
     @Schema(description = "Código da integração (CADINT.INT_CODAUT). Opcional.")
     private String idIntegracao;
 
-    // idIntegracao não entra aqui de propósito: quem grava é o service, depois de validar
-    // o código contra a CADINT do lojista autenticado.
+    /**
+     * PRO_STATUS. Opcional. Informado, o item só troca o status do produto já gravado (é o que o
+     * monitor manda); omitido, o item é o registro de erro de sempre.
+     */
+    @Schema(description = """
+            Opcional, 0 ou 1. Informado, o item só troca o status do produto já gravado com a mesma \
+            chave (cliente + codigoProduto + rotina): mensagem, tentativas e demais campos ficam como \
+            estão, e produto que não existe é ignorado. Omitido, o item registra o erro como sempre.""",
+            allowableValues = {"0", "1"})
+    private Integer status;
+
+    // idIntegracao não entra aqui: o service grava depois, já normalizado (vazio vira nulo).
     public static Produto converterDTO(ProdutoLoteDTO dto, Produto pro) {
         pro.setCodigoProduto(dto.getCodigoProduto());
         pro.setCliente(dto.getCliente());

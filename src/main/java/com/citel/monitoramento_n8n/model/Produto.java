@@ -1,6 +1,7 @@
 package com.citel.monitoramento_n8n.model;
 
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -50,6 +51,8 @@ public class Produto {
         this.id = UUID.randomUUID().toString();
     }
 
+    /** Atalho de setMensagemErro. Escondido do Swagger, que senão expõe um campo "erro" que o JSON não tem. */
+    @Schema(hidden = true)
     public void setErro(String erro) {
         this.mensagemErro = erro;
     }

@@ -12,8 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -103,16 +106,17 @@ public class ProdutoService {
     }
 
 
-    public List<Produto> registrarProdutosList(List<ProdutoLoteDTO> listaProdutos, Long codigoCliente) {
+    public List<Produto> registrarProdutosList(List<ProdutoLoteDTO> listaProdutos) {
+        // Status fora de 0/1 recusa o lote inteiro antes de gravar qualquer coisa.
+        listaProdutos.stream()
+                .map(ProdutoLoteDTO::getStatus)
+                .filter(Objects::nonNull)
+                .forEach(ProdutoService::validarStatus);
+
         List<String> clientes = listaProdutos.stream()
                 .map(ProdutoLoteDTO::getCliente).distinct().toList();
         List<String> codigos = listaProdutos.stream()
                 .map(ProdutoLoteDTO::getCodigoProduto).distinct().toList();
-
-        // Valida todos os códigos de integração do lote numa query só, antes de gravar qualquer
-        // coisa: se um deles não for do lojista, o lote inteiro é recusado.
-        integracaoService.resolverCodigosIntegracao(
-                listaProdutos.stream().map(ProdutoLoteDTO::getIdIntegracao).toList(), codigoCliente);
 
         // Busca todos os existentes numa única query (evita N+1) e indexa por cliente|codigoProduto|rotina
         Map<String, Produto> existentesPorChave = repository
@@ -121,40 +125,65 @@ public class ProdutoService {
                 .collect(Collectors.toMap(
                         p -> chave(p.getCliente(), p.getCodigoProduto(), p.getRotina()),
                         p -> p,
-                        (a, b) -> a));
+                        (a, b) -> a,
+                        HashMap::new));
 
-        List<Produto> listaPro = new ArrayList<>();
+        // Indexado pela chave, e não uma lista: o mesmo produto repetido no lote cai na mesma
+        // linha em vez de virar duas.
+        Map<String, Produto> paraGravar = new LinkedHashMap<>();
         for (ProdutoLoteDTO dto : listaProdutos) {
-            Produto existente = existentesPorChave.get(chave(dto.getCliente(), dto.getCodigoProduto(), dto.getRotina()));
-            boolean novo = existente == null;
+            String chave = chave(dto.getCliente(), dto.getCodigoProduto(), dto.getRotina());
+            Produto existente = existentesPorChave.get(chave);
 
+            if (dto.getStatus() != null) {
+                // Item do monitor: só o status muda. Não cria produto, não soma tentativa e não
+                // mexe na mensagem nem no código de integração.
+                if (existente == null) {
+                    log.warn("Produto {} (cliente {}, rotina {}) não encontrado - status {} ignorado",
+                            dto.getCodigoProduto(), dto.getCliente(), dto.getRotina(), dto.getStatus());
+                    continue;
+                }
+                existente.setStatus(dto.getStatus());
+                log.info("Produto {} (cliente {}, rotina {}) - status {}",
+                        dto.getCodigoProduto(), dto.getCliente(), dto.getRotina(), dto.getStatus());
+                paraGravar.put(chave, existente);
+                continue;
+            }
+
+            boolean novo = existente == null;
             Produto pro = ProdutoLoteDTO.converterDTO(dto, novo ? new Produto() : existente);
             if (novo) {
                 pro.setStatus(0);   // só define status quando é novo
                 pro.setTentativa(PRIMEIRA_TENTATIVA);
+                // A próxima ocorrência da mesma chave no lote atualiza este, em vez de criar outro.
+                existentesPorChave.put(chave, pro);
             } else {
                 pro.incrementarTentativa();
             }
-            // Já validado acima; omitido, fica nulo.
+            // Gravado como veio, sem conferir na CADINT: o n8n autentica o lote com o login de
+            // serviço, que não é o dono das integrações. Omitido, fica nulo.
             pro.setIdIntegracao(StringUtils.hasText(dto.getIdIntegracao()) ? dto.getIdIntegracao().trim() : null);
 
             log.info(novo ? "Produto criado - {} (tentativa {})" : "Produto atualizado - {} (tentativa {})",
                     dto.getCodigoProduto(), pro.getTentativa());
-            listaPro.add(pro);
+            paraGravar.put(chave, pro);
         }
 
-        return repository.saveAll(listaPro);
+        return repository.saveAll(new ArrayList<>(paraGravar.values()));
     }
 
 
     /**
-     * Lista os produtos pendentes (status 0). As duas pontas do filtro de tentativas são
-     * exclusivas e opcionais: {@code tentativaMaiorQue = 5} traz quem tem 6 ou mais,
-     * {@code tentativaMenorQue = 5} traz quem tem 4 ou menos, as duas juntas delimitam uma
-     * faixa e nenhuma delas = sem filtro.
+     * Lista os produtos no PRO_STATUS pedido: 0 (pendente, o padrão do endpoint) ou 1. As duas
+     * pontas do filtro de tentativas são exclusivas e opcionais: {@code tentativaMaiorQue = 5}
+     * traz quem tem 6 ou mais, {@code tentativaMenorQue = 5} traz quem tem 4 ou menos, as duas
+     * juntas delimitam uma faixa e nenhuma delas = sem filtro.
      */
-    public List<Produto> retornarProdutosPendentes(String codigoProduto, String cliente, String idIntegracao,
-                                                   Integer tentativaMaiorQue, Integer tentativaMenorQue) {
+    public List<Produto> retornarProdutos(int status, String codigoProduto, String cliente, String idIntegracao,
+                                          Integer tentativaMaiorQue, Integer tentativaMenorQue) {
+        // Recusar um status fora de 0/1 é melhor que devolver lista vazia, que se confunde com
+        // "não há produtos nesse status".
+        validarStatus(status);
         // Com as duas pontas exclusivas, precisa sobrar pelo menos um inteiro no meio: menorQue
         // tem de ser no mínimo maiorQue + 2. Recusar é melhor que devolver lista vazia, que se
         // confunde com "não há produtos nessa faixa".
@@ -167,9 +196,9 @@ public class ProdutoService {
                             + " ser ao menos tentativaMaiorQue + 2");
         }
 
-        log.info("🔍 Buscando Produtos - Cliente: {}, Código: {}, Tentativas: >{} e <{}",
-                cliente, codigoProduto, tentativaMaiorQue, tentativaMenorQue);
-        return repository.buscarPendentes(codigoProduto, cliente, idIntegracao,
+        log.info("🔍 Buscando Produtos - Status: {}, Cliente: {}, Código: {}, Tentativas: >{} e <{}",
+                status, cliente, codigoProduto, tentativaMaiorQue, tentativaMenorQue);
+        return repository.buscar(status, codigoProduto, cliente, idIntegracao,
                 tentativaMaiorQue, tentativaMenorQue);
     }
 
@@ -202,6 +231,13 @@ public class ProdutoService {
         log.info("🗑️ Removido produto {} (cliente {}, integração {}, rotina {}) - {} linha(s)",
                 codigoProduto, cliente, idIntegracao, rotina == null ? "todas" : rotina, removidos);
         return removidos;
+    }
+
+    /** PRO_STATUS que a API aceita: 0 (pendente) e 1. */
+    private static void validarStatus(int status) {
+        if (status != 0 && status != 1) {
+            throw new BusinessException("status deve ser 0 ou 1, mas veio " + status);
+        }
     }
 
     private static String chave(String cliente, String codigoProduto, String rotina) {

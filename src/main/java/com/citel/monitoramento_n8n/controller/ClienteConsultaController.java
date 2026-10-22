@@ -3,6 +3,7 @@ package com.citel.monitoramento_n8n.controller;
 import com.citel.monitoramento_n8n.DTO.ClienteResumoDTO;
 import com.citel.monitoramento_n8n.service.ClienteService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -40,7 +41,7 @@ public class ClienteConsultaController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lojistas encontrados",
                     content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ClienteResumoDTO.class))}),
+                            array = @ArraySchema(schema = @Schema(implementation = ClienteResumoDTO.class)))}),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @GetMapping

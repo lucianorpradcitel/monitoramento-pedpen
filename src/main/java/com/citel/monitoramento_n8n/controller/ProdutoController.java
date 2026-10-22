@@ -1,17 +1,16 @@
 package com.citel.monitoramento_n8n.controller;
 
 
-import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoLoteDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoRemovidoDTO;
 import com.citel.monitoramento_n8n.model.Cliente;
-import com.citel.monitoramento_n8n.model.Pedido;
 import com.citel.monitoramento_n8n.model.Produto;
 import com.citel.monitoramento_n8n.service.ProdutoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -46,7 +45,7 @@ public class ProdutoController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Erro registrado com sucesso",
                     content = { @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ProdutoDTO.class)) }),
+                            schema = @Schema(implementation = Produto.class)) }),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
 
@@ -57,38 +56,56 @@ public class ProdutoController {
     }
 
     @Operation(summary = "Registra uma lista de produtos no monitoramento de erros de integração",
-            description = "Recebe uma lista de produtos onde a comunicação com a plataforma falhou e os salva/atualiza em lote com o status 'Pendente'.")
+            description = """
+                    Recebe vários produtos numa chamada. A chave de cada um é
+                    cliente + codigoProduto + rotina, e cada item segue um de dois caminhos:
+
+                    - **sem `status`**: registro de erro (upsert). Produto novo nasce com status 0 e
+                      uma tentativa; produto já gravado soma uma tentativa e troca a mensagem. O mesmo
+                      produto repetido no lote cai numa linha só.
+                    - **com `status` (0 ou 1)**: é o que o monitor manda. Só o status do produto já
+                      gravado muda; mensagem, tentativas e demais campos ficam como estão. Produto
+                      que não existe é ignorado e não sai na resposta.
+
+                    A resposta traz os produtos gravados, um por chave.""")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Produtos registrados com sucesso",
+            @ApiResponse(responseCode = "200", description = "Produtos gravados, um por chave",
                     content = { @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Produto.class)) }),
+                            array = @ArraySchema(schema = @Schema(implementation = Produto.class))) }),
+            @ApiResponse(responseCode = "422", description = "status diferente de 0 e 1. Nada é gravado"),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @PostMapping("/lote")
-    public ResponseEntity<List<Produto>> registrarProdutoList(@RequestBody List<ProdutoLoteDTO> request,
-                                                              @AuthenticationPrincipal Cliente cliente) {
-        return ResponseEntity.ok(service.registrarProdutosList(request, cliente.getId()));
+    public ResponseEntity<List<Produto>> registrarProdutoList(@RequestBody List<ProdutoLoteDTO> request) {
+        return ResponseEntity.ok(service.registrarProdutosList(request));
     }
 
 
-    @Operation(summary = "Lista todos os produtos com status 'Erro'",
+    @Operation(summary = "Lista os produtos com erro de integração, filtrando pelo status",
             description = """
-                    Retorna uma lista de todos os produtos que foram registrados com erros e que ainda
-                    não foram resolvidos. Os filtros são combinados com E.
+                    Retorna os produtos registrados com erro que estão no status pedido. Os filtros
+                    são combinados com E.
+
+                    O `status` aceita 0 ou 1. Omitido, vale 0: traz os que ainda não foram
+                    resolvidos, como antes de o parâmetro existir. `?status=1` traz os que estão com
+                    PRO_STATUS 1. Qualquer outro valor é recusado com 422.
 
                     O número de tentativas é filtrado por comparação estrita, com as duas pontas
                     opcionais: `?tentativaMaiorQue=5` traz os que já falharam mais de 5 vezes,
                     `?tentativaMenorQue=5` os que falharam menos de 5 vezes, e as duas juntas
                     delimitam uma faixa (`?tentativaMaiorQue=2&tentativaMenorQue=6` traz 3, 4 e 5).""")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista de produtos com atualização pendente encontrada",
+            @ApiResponse(responseCode = "200", description = "Lista de produtos no status pedido",
                     content = { @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Pedido.class)) }),
-            @ApiResponse(responseCode = "422", description = "Faixa de tentativas impossível (ex.: maiorQue=5 com menorQue=5)"),
+                            array = @ArraySchema(schema = @Schema(implementation = Produto.class))) }),
+            @ApiResponse(responseCode = "400", description = "status ou tentativas não numéricos"),
+            @ApiResponse(responseCode = "422", description = "status diferente de 0 e 1, ou faixa de tentativas impossível (ex.: maiorQue=5 com menorQue=5)"),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @GetMapping()
     public ResponseEntity<List<Produto>> retornarProdutosPendentes(
+            @Parameter(description = "PRO_STATUS a consultar: 0 ou 1. Omitido, traz os pendentes (0)")
+            @RequestParam(defaultValue = "0") int status,
             @RequestParam(required = false) String codigoProduto,
             @RequestParam(required = false) String cliente,
             @RequestParam(required = false) String idIntegracao,
@@ -97,8 +114,8 @@ public class ProdutoController {
             @Parameter(description = "Só produtos com MENOS tentativas que este valor (exclusivo). Ex.: 5 traz 4 ou menos")
             @RequestParam(required = false) Integer tentativaMenorQue
     ) {
-        return ResponseEntity.ok(service.retornarProdutosPendentes(
-                codigoProduto, cliente, idIntegracao, tentativaMaiorQue, tentativaMenorQue));
+        return ResponseEntity.ok(service.retornarProdutos(
+                status, codigoProduto, cliente, idIntegracao, tentativaMaiorQue, tentativaMenorQue));
     }
 
     @Operation(summary = "Remove um produto do monitoramento",

@@ -4,6 +4,7 @@ import com.citel.monitoramento_n8n.DTO.DadosCriacaoPlataforma;
 import com.citel.monitoramento_n8n.DTO.PlataformaResumoDTO;
 import com.citel.monitoramento_n8n.service.PlataformaService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -57,7 +58,7 @@ public class PlataformaController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de plataformas",
                     content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = PlataformaResumoDTO.class))}),
+                            array = @ArraySchema(schema = @Schema(implementation = PlataformaResumoDTO.class)))}),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @GetMapping

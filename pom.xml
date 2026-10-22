@@ -104,6 +104,9 @@
 						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
+							<!-- Explícita para o IntelliJ: sem ela o import do Maven grava lombok-unknown.jar
+							     como processador e o build da IDE quebra em todo @Slf4j/@Getter. -->
+							<version>${lombok.version}</version>
 						</path>
 					</annotationProcessorPaths>
 				</configuration>

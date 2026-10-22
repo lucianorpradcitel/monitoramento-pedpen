@@ -12,6 +12,7 @@ import com.citel.monitoramento_n8n.service.IntegracaoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -93,9 +94,10 @@ public class IntegracaoController {
                     incluirCredenciais=true devolve o contexto completo — é o que os pais de \
                     fan-out do n8n precisam, porque repassam a linha inteira ao workflow filho.""")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista de integrações",
+            @ApiResponse(responseCode = "200", description = "Lista de integrações: IntegracaoResumoDTO por padrão, IntegracaoContextoDTO com incluirCredenciais=true",
                     content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = IntegracaoResumoDTO.class))}),
+                            array = @ArraySchema(schema = @Schema(type = "object",
+                                    oneOf = {IntegracaoResumoDTO.class, IntegracaoContextoDTO.class})))}),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @GetMapping
