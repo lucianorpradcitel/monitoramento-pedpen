@@ -1,6 +1,7 @@
 package com.citel.monitoramento_n8n.controller;
 
 import com.citel.monitoramento_n8n.DTO.AlteracaoSituacaoDTO;
+import com.citel.monitoramento_n8n.DTO.AlteracaoWebserviceDTO;
 import com.citel.monitoramento_n8n.DTO.AtualizacaoTokensDTO;
 import com.citel.monitoramento_n8n.DTO.DadosCriacaoIntegracao;
 import com.citel.monitoramento_n8n.DTO.EdicaoIntegracaoDTO;
@@ -159,6 +160,31 @@ public class IntegracaoController {
             @RequestBody @Valid EdicaoIntegracaoDTO dados,
             @AuthenticationPrincipal Usuario usuario) {
         return ResponseEntity.ok(service.editar(codigoIntegracao, codigoCliente, dados, usuario));
+    }
+
+    @Operation(summary = "Troca o webservice do ERP de uma integração (qualquer usuário interno)",
+            description = """
+                    Só o webservice: URL da API e chave privada continuam no PATCH de ADM. Valor aparado nas \
+                    pontas; se mudou, vira uma linha no LOGINT com o valor anterior, o atual e o nome do \
+                    usuário, e reenviar o mesmo valor não grava nada. A resposta não traz segredo. O lojista \
+                    (token do n8n) recebe 403.""")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Integração com o webservice atual",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = IntegracaoResumoDTO.class))}),
+            @ApiResponse(responseCode = "400", description = "urlWebservice ausente ou vazia"),
+            @ApiResponse(responseCode = "403", description = "Não é usuário interno"),
+            @ApiResponse(responseCode = "404", description = "Par código de integração + lojista inexistente"),
+            @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
+    })
+    @PatchMapping("/{codigoIntegracao}/{codigoCliente}/webservice")
+    public ResponseEntity<IntegracaoResumoDTO> alterarWebservice(
+            @PathVariable String codigoIntegracao,
+            @Parameter(description = "CLI_CODCLI do lojista — o código de autorização se repete entre lojistas")
+            @PathVariable Long codigoCliente,
+            @RequestBody @Valid AlteracaoWebserviceDTO dados,
+            @AuthenticationPrincipal Usuario usuario) {
+        return ResponseEntity.ok(service.alterarWebservice(codigoIntegracao, codigoCliente, dados.urlWebservice(), usuario));
     }
 
     @Operation(summary = "Ativa, inativa ou coloca uma integração em desenvolvimento (qualquer usuário interno)",

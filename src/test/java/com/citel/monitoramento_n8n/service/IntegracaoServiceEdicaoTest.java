@@ -2,6 +2,7 @@ package com.citel.monitoramento_n8n.service;
 
 import com.citel.monitoramento_n8n.DTO.EdicaoIntegracaoDTO;
 import com.citel.monitoramento_n8n.DTO.IntegracaoEdicaoDTO;
+import com.citel.monitoramento_n8n.DTO.IntegracaoResumoDTO;
 import com.citel.monitoramento_n8n.exception.NotFoundException;
 import com.citel.monitoramento_n8n.model.Cliente;
 import com.citel.monitoramento_n8n.model.Integracao;
@@ -225,6 +226,41 @@ class IntegracaoServiceEdicaoTest {
         assertThat(resposta.chavePrivada()).isEqualTo(PEM_NOVA);
         assertThat(resposta.nomeCliente()).isEqualTo("TODO TETO");
         assertThat(resposta.slug()).isEqualTo("todo-teto");
+    }
+
+    // ---- PATCH .../webservice: só o webservice, para qualquer usuário interno ----
+
+    @Test
+    void alterarWebserviceTrocaSoOWebserviceEGravaUmaLinha() {
+        liberarSave();
+
+        IntegracaoResumoDTO resposta = service.alterarWebservice("0000004", 401L, "  http://novo.local:25058 ", admin);
+
+        List<LogIntegracao> logs = logsGravados();
+        assertThat(logs).hasSize(1);
+        assertThat(logs.get(0).getCampoAlterado()).isEqualTo("INT_URLWBS");
+        assertThat(logs.get(0).getValorAnterior()).isEqualTo("http://erp.local:25058");
+        assertThat(logs.get(0).getValorAtual()).isEqualTo("http://novo.local:25058");
+        assertThat(logs.get(0).getNomeUsuario()).isEqualTo("Gabriel Beraldo");
+        assertThat(resposta.urlWebservice()).isEqualTo("http://novo.local:25058");
+        assertThat(integracao.getUrlApi()).isEqualTo("https://loja.commercesuite.com.br/web_api");
+        assertThat(integracao.getChavePrivada()).isEqualTo(PEM_ANTIGA);
+    }
+
+    @Test
+    void alterarWebserviceComOMesmoValorNaoGravaNada() {
+        service.alterarWebservice("0000004", 401L, " http://erp.local:25058 ", admin);
+
+        verify(repository, never()).save(any());
+        verifyNoInteractions(logRepository);
+    }
+
+    @Test
+    void alterarWebserviceDeIntegracaoInexistenteDaNotFound() {
+        assertThatThrownBy(() -> service.alterarWebservice("9999999", 1L, "http://x", admin))
+                .isInstanceOf(NotFoundException.class);
+
+        verifyNoInteractions(logRepository);
     }
 
     @Test

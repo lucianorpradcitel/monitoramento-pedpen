@@ -213,11 +213,7 @@ public class IntegracaoService {
         List<LogIntegracao> alteracoes = new ArrayList<>();
 
         // URLs vão sem espaços nas pontas; a chave PEM vai exatamente como veio (reformatar quebra o RS256).
-        String urlWebservice = aparar(dados.urlWebservice());
-        if (urlWebservice != null && !urlWebservice.equals(integracao.getUrlWebservice())) {
-            alteracoes.add(registrar(integracao, usuario, CAMPO_URL_WEBSERVICE, integracao.getUrlWebservice(), urlWebservice));
-            integracao.setUrlWebservice(urlWebservice);
-        }
+        trocarWebservice(integracao, usuario, dados.urlWebservice(), alteracoes);
 
         String urlApi = aparar(dados.urlApi());
         if (urlApi != null && !urlApi.equals(integracao.getUrlApi())) {
@@ -245,6 +241,40 @@ public class IntegracaoService {
                 alteracoes.stream().map(LogIntegracao::getCampoAlterado).toList(), nomeDe(usuario));
 
         return IntegracaoEdicaoDTO.de(salva);
+    }
+
+    /**
+     * Troca só o webservice do ERP. É a parte da edição aberta a qualquer usuário interno (USR, DEV, ADM): a resposta
+     * não traz segredo nenhum, ao contrário do PATCH de ADMIN. Mesmas regras do {@link #editar}: URL aparada, e só
+     * vira linha no LOGINT se mudou de fato.
+     */
+    @Transactional
+    public IntegracaoResumoDTO alterarWebservice(String codigoIntegracao, Long codigoCliente, String urlWebservice,
+                                                 Usuario usuario) {
+        Integracao integracao = buscarOuFalhar(codigoIntegracao, codigoCliente);
+        List<LogIntegracao> alteracoes = new ArrayList<>();
+        trocarWebservice(integracao, usuario, urlWebservice, alteracoes);
+
+        if (alteracoes.isEmpty()) {
+            log.info("Webservice sem alteração - código: {}, lojista: {}", codigoIntegracao, codigoCliente);
+            return IntegracaoResumoDTO.de(integracao);
+        }
+
+        Integracao salva = repository.save(integracao);
+        logRepository.saveAll(alteracoes);
+
+        log.info("Webservice alterado - código: {}, lojista: {}, por: {}", codigoIntegracao, codigoCliente, nomeDe(usuario));
+
+        return IntegracaoResumoDTO.de(salva);
+    }
+
+    /** Aplica o webservice novo (aparado) e anota a linha do LOGINT, se for diferente do atual. Nulo não mexe. */
+    private void trocarWebservice(Integracao integracao, Usuario usuario, String novo, List<LogIntegracao> alteracoes) {
+        String urlWebservice = aparar(novo);
+        if (urlWebservice != null && !urlWebservice.equals(integracao.getUrlWebservice())) {
+            alteracoes.add(registrar(integracao, usuario, CAMPO_URL_WEBSERVICE, integracao.getUrlWebservice(), urlWebservice));
+            integracao.setUrlWebservice(urlWebservice);
+        }
     }
 
     /**
