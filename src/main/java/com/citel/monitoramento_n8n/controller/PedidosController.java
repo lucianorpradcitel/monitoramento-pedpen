@@ -1,5 +1,6 @@
 package com.citel.monitoramento_n8n.controller;
 
+import com.citel.monitoramento_n8n.DTO.CodigoMensagemDTO;
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
 import com.citel.monitoramento_n8n.model.Pedido;
@@ -43,6 +44,23 @@ public class PedidosController {
     public ResponseEntity<Pedido> registrarPedido(@RequestBody PedidoDTO request) {
         return ResponseEntity.ok(service.registrarPedido(request));
     }
+    @Operation(summary = "Liga o pedido ao tipo de erro (responsabilidade 2/3)",
+            description = """
+                    Grava só o PEN_CODMSG (CADMSG.MSG_CODIGO): não mexe no status, no erro nem no \
+                    sequencialProcessamento. É o último passo do n8n: grava no POST /pendentes, classifica \
+                    no SUB_Error_Status e liga o tipo aqui, pelo id que o POST devolveu. codigoMensagem nulo desliga.""")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Tipo ligado",
+                    content = { @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Pedido.class)) }),
+            @ApiResponse(responseCode = "404", description = "Pedido não encontrado")
+    })
+    @PatchMapping("/pedidos/{id}/tipo-erro")
+    public ResponseEntity<Pedido> definirTipoErro(@PathVariable String id,
+                                                  @RequestBody(required = false) CodigoMensagemDTO dados) {
+        return ResponseEntity.ok(service.definirTipoErro(id, dados == null ? null : dados.codigoMensagem()));
+    }
+
     @PostMapping("pendentes-lote")
     public ResponseEntity<List<Pedido>> registrarPedidoList(@RequestBody List<PedidoLoteDTO> request) {
         return ResponseEntity.ok(service.registrarPedidosList(request));

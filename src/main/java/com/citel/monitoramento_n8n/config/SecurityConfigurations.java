@@ -90,6 +90,11 @@ public class SecurityConfigurations {
                     // requisição sem login levam 403, também pelo Swagger/Postman.
                     req.requestMatchers(HttpMethod.PATCH, "/pedidos/*/reprocessar").hasRole("INTERNO");
 
+                    // Ligar o erro ao tipo (responsabilidade 2/3): é o n8n que faz, depois de gravar o erro e
+                    // classificar. Mesma regra do registro de erros, só lojista; usuário interno leva 403.
+                    req.requestMatchers(HttpMethod.PATCH, "/produtos/*/tipo-erro", "/pedidos/*/tipo-erro")
+                            .hasRole("LOJISTA");
+
                     req.anyRequest().authenticated();
                 })
                 .exceptionHandling(erros -> erros.accessDeniedHandler(acessoNegado()))

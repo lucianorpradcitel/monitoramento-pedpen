@@ -1,6 +1,7 @@
 package com.citel.monitoramento_n8n.controller;
 
 
+import com.citel.monitoramento_n8n.DTO.CodigoMensagemDTO;
 import com.citel.monitoramento_n8n.DTO.FiltrosProdutosDTO;
 import com.citel.monitoramento_n8n.DTO.PaginaDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoDTO;
@@ -48,6 +49,23 @@ public class ProdutoController {
     @PostMapping
     public ResponseEntity<Produto> registrarProduto(@RequestBody ProdutoDTO request) {
         return ResponseEntity.ok(service.registrarProduto(request));
+    }
+
+    @Operation(summary = "Liga o erro do produto ao tipo de erro (responsabilidade 2/3)",
+            description = """
+                    Grava só o PRO_CODMSG (CADMSG.MSG_CODIGO): não soma tentativa e não mexe na mensagem. \
+                    É o último passo do n8n: grava o erro no POST /produtos, classifica no SUB_Error_Status \
+                    e liga o tipo aqui, pelo id que o POST devolveu. codigoMensagem nulo desliga.""")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Tipo ligado",
+                    content = { @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Produto.class)) }),
+            @ApiResponse(responseCode = "404", description = "Produto não encontrado")
+    })
+    @PatchMapping("/{id}/tipo-erro")
+    public ResponseEntity<Produto> definirTipoErro(@PathVariable String id,
+                                                   @RequestBody(required = false) CodigoMensagemDTO dados) {
+        return ResponseEntity.ok(service.definirTipoErro(id, dados == null ? null : dados.codigoMensagem()));
     }
 
     @Operation(summary = "Registra uma lista de produtos no monitoramento de erros de integração",

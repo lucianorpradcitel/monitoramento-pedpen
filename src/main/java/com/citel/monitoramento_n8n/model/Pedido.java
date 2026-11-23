@@ -35,6 +35,12 @@ public class Pedido {
     private String idIntegracao;
     @Column(name="PEN_ROTINA")
     private String rotina;
+    /**
+     * Tipo do erro (CADMSG.MSG_CODIGO), que diz a responsabilidade: 2 = culpa nossa, 3 = não é culpa
+     * nossa. Nulo = sem tipo. Acompanha o erro: cada POST /pendentes grava o código que veio.
+     */
+    @Column(name="PEN_CODMSG")
+    private Integer codigoMensagem;
 
     public Pedido() {
         this.id = UUID.randomUUID().toString();
@@ -107,4 +113,8 @@ public class Pedido {
     public String getRotina() {return rotina;}
 
     public void setRotina(String rotina) {this.rotina = rotina;}
+
+    public Integer getCodigoMensagem() {return codigoMensagem;}
+
+    public void setCodigoMensagem(Integer codigoMensagem) {this.codigoMensagem = codigoMensagem;}
 }

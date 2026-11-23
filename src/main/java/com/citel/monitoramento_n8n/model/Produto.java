@@ -40,6 +40,12 @@ public class Produto {
     /** Quantas vezes o mesmo produto (codigoProduto + cliente + rotina) foi reportado com erro. */
     @Column(name="PRO_TENTAT")
     private int tentativa;
+    /**
+     * Tipo do erro (CADMSG.MSG_CODIGO), que diz a responsabilidade: 2 = culpa nossa, 3 = não é culpa
+     * nossa. Nulo = erro ainda sem tipo. Acompanha a mensagem: mensagem nova sem código limpa o tipo.
+     */
+    @Column(name="PRO_CODMSG")
+    private Integer codigoMensagem;
 
     public Produto() {
         this.id = UUID.randomUUID().toString();

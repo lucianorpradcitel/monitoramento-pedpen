@@ -55,6 +55,8 @@ public class PedidoService {
         // não é o dono das integrações. Omitido, fica nulo.
         pedido.setIdIntegracao(normalizarIdIntegracao(pedidoComErro.getIdIntegracao()));
         pedido.setRotina(pedidoComErro.getRotina());
+        // O tipo acompanha o erro, que é sempre trocado pelo enviado.
+        pedido.setCodigoMensagem(pedidoComErro.getCodigoMensagem());
         // Cada nova tentativa de gravar o pedido com erro conta como um processamento. Só este
         // endpoint incrementa: o lote (registrarPedidosList) não mexe no sequencial. Pedido
         // novo já nasce com 1 (default da entidade).
@@ -125,6 +127,20 @@ public class PedidoService {
                 salvo.getCodigoPedido(), salvo.getCliente(), salvo.getPlataforma(),
                 StringUtils.hasText(usuario.getNome()) ? usuario.getNome() : usuario.getEmail());
         return salvo;
+    }
+
+    /**
+     * Liga o pedido ao tipo do erro (PEN_CODMSG) sem mexer no status, no erro nem no sequencial.
+     * É o passo final do n8n: grava (POST /pendentes), classifica (SUB_Error_Status) e liga o tipo.
+     * Nulo desliga.
+     */
+    @Transactional
+    public Pedido definirTipoErro(String id, Integer codigoMensagem) {
+        Pedido pedido = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Pedido não encontrado: " + id));
+        pedido.setCodigoMensagem(codigoMensagem);
+        log.info("Pedido {} (lojista {}) - tipo de erro {}", pedido.getCodigoPedido(), pedido.getCliente(), codigoMensagem);
+        return repository.save(pedido);
     }
 
     public List<Pedido> retornarPedidos(List<Integer> status, String cliente, String codigoPedido,

@@ -23,6 +23,10 @@ public class ProdutoLoteDTO {
     @Schema(description = "Código da integração (CADINT.INT_CODAUT). Opcional.")
     private String idIntegracao;
 
+    /** CADMSG.MSG_CODIGO do tipo do erro. Opcional: no registro de erro, omitido limpa o tipo. */
+    @Schema(description = "Tipo do erro (CADMSG.MSG_CODIGO), que define a responsabilidade 2/3. Opcional.")
+    private Integer codigoMensagem;
+
     /**
      * PRO_STATUS. Opcional. Informado, o item só troca o status do produto já gravado (é o que o
      * monitor manda); omitido, o item é o registro de erro de sempre.
@@ -41,6 +45,8 @@ public class ProdutoLoteDTO {
         pro.setPlataforma(dto.getPlataforma());
         pro.setErro(dto.getMensagemErro());
         pro.setRotina(dto.getRotina());
+        // O tipo acompanha a mensagem, que aqui é sempre trocada.
+        pro.setCodigoMensagem(dto.getCodigoMensagem());
 
         return pro;
     }
