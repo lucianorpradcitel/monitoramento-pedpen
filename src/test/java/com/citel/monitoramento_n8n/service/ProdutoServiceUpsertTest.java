@@ -49,7 +49,7 @@ class ProdutoServiceUpsertTest {
 
     private ProdutoDTO post(String mensagem) {
         return new ProdutoDTO(null, "04464", mensagem, null, "VENTURE", "TRAY", 0,
-                "0000004", ROTINA);
+                "0000004", ROTINA, null);
     }
 
     @Test

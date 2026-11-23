@@ -35,7 +35,7 @@ class RegistroSemValidarIntegracaoTest {
 
         Produto salvo = new ProdutoService(produtoRepository).registrarProduto(new ProdutoDTO(
                 null, "00018", "Produto 00018: preço zerado ou tabela 5 não encontrada no ERP.", null,
-                "GUARU TINTAS", "TRAY", 0, " 0000004 ", "MASTER_Tray_Preco_Batch_Cliente"));
+                "GUARU TINTAS", "TRAY", 0, " 0000004 ", "MASTER_Tray_Preco_Batch_Cliente", null));
 
         assertThat(salvo.getIdIntegracao()).isEqualTo("0000004");
     }

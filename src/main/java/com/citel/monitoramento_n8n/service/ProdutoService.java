@@ -6,6 +6,7 @@ import com.citel.monitoramento_n8n.DTO.PaginaDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoLoteDTO;
 import com.citel.monitoramento_n8n.exception.BusinessException;
+import com.citel.monitoramento_n8n.exception.NotFoundException;
 import com.citel.monitoramento_n8n.model.Produto;
 import com.citel.monitoramento_n8n.repository.ProdutoRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -67,6 +68,7 @@ public class ProdutoService {
             // que não é o dono das integrações. Omitido, fica nulo.
             novoProduto.setIdIntegracao(normalizarIdIntegracao(produtoDTO.idIntegracao()));
             novoProduto.setRotina(produtoDTO.rotina());
+            novoProduto.setCodigoMensagem(produtoDTO.codigoMensagem());
             return repository.save(novoProduto);
         }
         else {
@@ -77,9 +79,14 @@ public class ProdutoService {
             Produto existente = produtoComErro.get();
             existente.incrementarTentativa();
 
-            // Mensagem vazia no payload mantém a gravada.
+            // Mensagem vazia no payload mantém a gravada. O tipo acompanha a mensagem: mensagem nova
+            // troca o tipo pelo enviado (omitido = sem tipo, porque o antigo pode não valer mais).
+            // Sem mensagem, o tipo só muda se vier um.
             if (StringUtils.hasText(produtoDTO.mensagemErro())) {
                 existente.setErro(produtoDTO.mensagemErro());
+                existente.setCodigoMensagem(produtoDTO.codigoMensagem());
+            } else if (produtoDTO.codigoMensagem() != null) {
+                existente.setCodigoMensagem(produtoDTO.codigoMensagem());
             }
 
             log.info("Produto {} (cliente {}, rotina {}) já registrado - tentativa {}",
@@ -290,6 +297,21 @@ public class ProdutoService {
         log.info("🗑️ Removido produto {} (cliente {}, integração {}, rotina {}) - {} linha(s)",
                 codigoProduto, cliente, idIntegracao, rotina == null ? "todas" : rotina, removidos);
         return removidos;
+    }
+
+    /**
+     * Liga o erro ao tipo dele (PRO_CODMSG) sem contar tentativa nem tocar na mensagem. É o passo
+     * final do n8n: grava o erro (POST /produtos), classifica (SUB_Error_Status) e liga o tipo.
+     * Nulo desliga.
+     */
+    @Transactional
+    public Produto definirTipoErro(String id, Integer codigoMensagem) {
+        Produto produto = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Produto não encontrado: " + id));
+        produto.setCodigoMensagem(codigoMensagem);
+        log.info("Produto {} (cliente {}, rotina {}) - tipo de erro {}",
+                produto.getCodigoProduto(), produto.getCliente(), produto.getRotina(), codigoMensagem);
+        return repository.save(produto);
     }
 
     /** PRO_STATUS que a API aceita: 0 (pendente) e 1. */
