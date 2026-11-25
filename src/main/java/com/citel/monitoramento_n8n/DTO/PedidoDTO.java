@@ -43,10 +43,10 @@ public class PedidoDTO {
     private String idIntegracao;
 
     /**
-     * CADMSG.MSG_CODIGO do tipo do erro. Opcional. O erro do pedido é sempre trocado pelo enviado,
+     * CADERR.MSG_CODIGO do tipo do erro. Opcional. O erro do pedido é sempre trocado pelo enviado,
      * e o tipo vai junto: omitido, o pedido fica sem tipo.
      */
     @Setter
-    @Schema(description = "Tipo do erro (CADMSG.MSG_CODIGO), que define a responsabilidade (0 a 4). Opcional.")
+    @Schema(description = "Tipo do erro (CADERR.MSG_CODIGO), que define a responsabilidade (0 a 4). Opcional.")
     private Integer codigoMensagem;
 }

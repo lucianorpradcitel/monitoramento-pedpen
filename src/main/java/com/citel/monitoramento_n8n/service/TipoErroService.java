@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Tipos de erro (CADMSG). Quem grava tipo novo é o n8n (SUB_Error_Status), depois que a IA decide;
+ * Tipos de erro (CADERR). Quem grava tipo novo é o n8n (SUB_Error_Status), depois que a IA decide;
  * quem valida e reclassifica é o time, pelo portal.
  */
 @Slf4j

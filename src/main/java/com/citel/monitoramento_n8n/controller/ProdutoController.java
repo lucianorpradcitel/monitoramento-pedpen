@@ -56,7 +56,7 @@ public class ProdutoController {
 
     @Operation(summary = "Liga o erro do produto ao tipo de erro (responsabilidade 0 a 4)",
             description = """
-                    Grava só o PRO_CODMSG (CADMSG.MSG_CODIGO): não soma tentativa e não mexe na mensagem. \
+                    Grava só o PRO_CODMSG (CADERR.MSG_CODIGO): não soma tentativa e não mexe na mensagem. \
                     É o último passo do n8n: grava o erro no POST /produtos, classifica no SUB_Error_Status \
                     e liga o tipo aqui, pelo id que o POST devolveu. codigoMensagem nulo desliga.""")
     @ApiResponses(value = {
@@ -150,7 +150,7 @@ public class ProdutoController {
                     em todos os registros e não só na página atual. `cliente` e `plataforma` são
                     exatos; as opções válidas vêm do GET /produtos/filtros.
 
-                    `responsabilidade` filtra pelo tipo do erro (CADMSG.MSG_CODSTA): 0 não informado
+                    `responsabilidade` filtra pelo tipo do erro (CADERR.MSG_CODSTA): 0 não informado
                     (inclui o erro ainda sem tipo), 1 culpa nossa, 2 culpa do cliente, 3 instabilidade,
                     4 culpa da plataforma externa. Aceita mais de um valor (`?responsabilidade=1&responsabilidade=0`
                     ou `?responsabilidade=1,0`); omitido, traz todas. Cada produto da resposta traz o campo

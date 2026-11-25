@@ -47,7 +47,7 @@ public class PedidosController {
     }
     @Operation(summary = "Liga o pedido ao tipo de erro (responsabilidade 0 a 4)",
             description = """
-                    Grava só o PEN_CODMSG (CADMSG.MSG_CODIGO): não mexe no status, no erro nem no \
+                    Grava só o PEN_CODMSG (CADERR.MSG_CODIGO): não mexe no status, no erro nem no \
                     sequencialProcessamento. É o último passo do n8n: grava no POST /pendentes, classifica \
                     no SUB_Error_Status e liga o tipo aqui, pelo id que o POST devolveu. codigoMensagem nulo desliga.""")
     @ApiResponses(value = {
@@ -133,7 +133,7 @@ public class PedidosController {
                     Omitir o parâmetro traz todos os status. Os demais filtros são combinados
                     com E (ex.: `?status=1,2&cliente=chiareli`).
 
-                    `responsabilidade` filtra pelo tipo do erro (CADMSG.MSG_CODSTA): 0 não informado
+                    `responsabilidade` filtra pelo tipo do erro (CADERR.MSG_CODSTA): 0 não informado
                     (inclui o pedido ainda sem tipo), 1 culpa nossa, 2 cliente, 3 instabilidade,
                     4 plataforma externa; é outra coisa que o `status` (situação na fila). Cada pedido
                     traz o campo `responsabilidade`. Valor fora de 0 a 4 é recusado com 422.

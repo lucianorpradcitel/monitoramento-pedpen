@@ -12,7 +12,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * Tipo de erro de integração (CADMSG): plataforma + código estável + responsabilidade (2 ou 3).
+ * Tipo de erro de integração (CADERR): plataforma + código estável + responsabilidade (2 ou 3).
  *
  * A responsabilidade fica no tipo, não em cada erro: PROERR.PRO_CODMSG e PEDPEN.PEN_CODMSG apontam para
  * MSG_CODIGO, então reclassificar o tipo muda todos os erros ligados a ele de uma vez.
@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
  * contam como iguais na busca e na chave.
  */
 @Entity
-@Table(name = "CADMSG")
+@Table(name = "CADERR")
 @Getter
 @Setter
 public class TipoErro {
