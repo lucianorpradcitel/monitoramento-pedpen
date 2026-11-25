@@ -21,7 +21,7 @@ public record DadosCriacaoTipoErro(
         @Size(max = 60, message = "codigoErro tem no máximo 60 caracteres")
         String codigoErro,
 
-        @Schema(example = "3", description = "STA_CODIGO da STAERR: 2 = culpa nossa, 3 = não é culpa nossa.")
+        @Schema(example = "3", description = "STA_CODIGO da STAERR: 0 não informado, 1 culpa nossa, 2 culpa do cliente, 3 instabilidade, 4 culpa da plataforma externa.")
         @NotNull(message = "status é obrigatório")
         Integer status,
 

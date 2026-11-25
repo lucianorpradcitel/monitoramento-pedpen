@@ -1,6 +1,7 @@
 package com.citel.monitoramento_n8n.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Formula;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -36,11 +37,19 @@ public class Pedido {
     @Column(name="PEN_ROTINA")
     private String rotina;
     /**
-     * Tipo do erro (CADMSG.MSG_CODIGO), que diz a responsabilidade: 2 = culpa nossa, 3 = não é culpa
-     * nossa. Nulo = sem tipo. Acompanha o erro: cada POST /pendentes grava o código que veio.
+     * Tipo do erro (CADMSG.MSG_CODIGO), que define a responsabilidade (veja {@link #responsabilidade}).
+     * Nulo = sem tipo. Acompanha o erro: cada POST /pendentes grava o código que veio.
      */
     @Column(name="PEN_CODMSG")
     private Integer codigoMensagem;
+    /**
+     * Responsabilidade do erro, lida do tipo (CADMSG.MSG_CODSTA): 0 = não informado, 1 = culpa nossa,
+     * 2 = culpa do cliente, 3 = instabilidade, 4 = culpa da plataforma externa. Pedido sem tipo vale 0.
+     * Campo calculado pelo banco a cada leitura e só de leitura: não confundir com o status (PEN_STATUS),
+     * que é a situação na fila. Em um pedido recém-gravado vem nulo até a próxima leitura.
+     */
+    @Formula("COALESCE((SELECT m.MSG_CODSTA FROM CADMSG m WHERE m.MSG_CODIGO = PEN_CODMSG), 0)")
+    private Integer responsabilidade;
 
     public Pedido() {
         this.id = UUID.randomUUID().toString();
@@ -117,4 +126,7 @@ public class Pedido {
     public Integer getCodigoMensagem() {return codigoMensagem;}
 
     public void setCodigoMensagem(Integer codigoMensagem) {this.codigoMensagem = codigoMensagem;}
+
+    /** Só leitura: vem do banco (CADMSG.MSG_CODSTA do tipo). Sem setter de propósito. */
+    public Integer getResponsabilidade() {return responsabilidade;}
 }

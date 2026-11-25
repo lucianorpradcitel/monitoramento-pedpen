@@ -38,6 +38,9 @@ public class ProdutoService {
     /** Todo registro nasce com uma tentativa: o POST que o criou. */
     private static final int PRIMEIRA_TENTATIVA = 1;
 
+    /** Responsabilidades válidas (STAERR): 0 não informado, 1 nossa, 2 cliente, 3 instabilidade, 4 plataforma. */
+    private static final List<Integer> RESPONSABILIDADES = List.of(0, 1, 2, 3, 4);
+
     /** Registros por página que o GET /produtos aceita, além de {@link #TAMANHO_TODOS}. */
     private static final Set<Integer> TAMANHOS_PERMITIDOS = Set.of(50, 100, 1000);
 
@@ -169,7 +172,8 @@ public class ProdutoService {
      * As duas pontas do filtro de tentativas são exclusivas e opcionais: {@code tentativaMaiorQue = 5}
      * traz quem tem 6 ou mais, {@code tentativaMenorQue = 5} traz quem tem 4 ou menos, as duas
      * juntas delimitam uma faixa e nenhuma delas = sem filtro. O período filtra a data do erro
-     * (PRO_DTAERR) e as duas pontas são inclusivas e opcionais.
+     * (PRO_DTAERR) e as duas pontas são inclusivas e opcionais. {@code responsabilidades} filtra pela
+     * responsabilidade do tipo do erro (0 a 4; erro sem tipo vale 0); nulo ou vazio = todas.
      *
      * <p>Ordena pela data do erro e desempata pelo id, para que registros com o mesmo instante não
      * troquem de página entre uma consulta e a seguinte. A página começa em 1; uma página além da
@@ -179,10 +183,18 @@ public class ProdutoService {
                                                Integer tentativaMaiorQue, Integer tentativaMenorQue,
                                                LocalDateTime dataInicial, LocalDateTime dataFinal,
                                                String plataforma, String produtoContem, String erroContem,
+                                               List<Integer> responsabilidades,
                                                int pagina, int tamanho, String ordem) {
         // Recusar um status fora de 0/1 é melhor que devolver lista vazia, que se confunde com
         // "não há produtos nesse status".
         validarStatus(status);
+        // Sem o parâmetro vale a lista inteira (0 a 4): quem já usava a API não percebe mudança.
+        List<Integer> responsabilidadesFiltro = (responsabilidades == null || responsabilidades.isEmpty())
+                ? RESPONSABILIDADES
+                : responsabilidades;
+        if (!RESPONSABILIDADES.containsAll(responsabilidadesFiltro)) {
+            throw new BusinessException("responsabilidade deve ser de 0 a 4, mas veio " + responsabilidadesFiltro);
+        }
         // Com as duas pontas exclusivas, precisa sobrar pelo menos um inteiro no meio: menorQue
         // tem de ser no mínimo maiorQue + 2. Recusar é melhor que devolver lista vazia, que se
         // confunde com "não há produtos nessa faixa".
@@ -219,7 +231,7 @@ public class ProdutoService {
         PaginaDTO<Produto> resultado = PaginaDTO.de(repository.buscar(status, codigoProduto, cliente, idIntegracao,
                 tentativaMaiorQue, tentativaMenorQue, paraData(dataInicial), paraData(dataFinal),
                 StringUtils.hasText(plataforma) ? plataforma : null,
-                paraPadraoLike(produtoContem), paraPadraoLike(erroContem), pageable));
+                paraPadraoLike(produtoContem), paraPadraoLike(erroContem), responsabilidadesFiltro, pageable));
         return todos
                 ? new PaginaDTO<>(resultado.itens(), 1, TAMANHO_TODOS, resultado.totalItens(), resultado.totalPaginas())
                 : resultado;

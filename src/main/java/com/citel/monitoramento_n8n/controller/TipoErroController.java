@@ -31,7 +31,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/tipos-erro")
-@Tag(name = "Tipos de erro", description = "Responsabilidade dos erros de integração: 2 = culpa nossa, 3 = não é culpa nossa (CADMSG)")
+@Tag(name = "Tipos de erro", description = "Responsabilidade dos erros de integração, de 0 a 4: não informado, nossa, cliente, instabilidade, plataforma externa (CADMSG)")
 public class TipoErroController {
 
     private final TipoErroService service;

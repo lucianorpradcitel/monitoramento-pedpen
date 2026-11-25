@@ -28,7 +28,7 @@ public record ProdutoDTO(
          * CADMSG.MSG_CODIGO do tipo do erro. Opcional: omitido junto com uma mensagem nova, o tipo
          * antigo é limpo (a mensagem mudou, o tipo pode não valer mais).
          */
-        @Schema(description = "Tipo do erro (CADMSG.MSG_CODIGO), que define a responsabilidade 2/3. Opcional.")
+        @Schema(description = "Tipo do erro (CADMSG.MSG_CODIGO), que define a responsabilidade (0 a 4). Opcional.")
         Integer codigoMensagem
 ) {
 }

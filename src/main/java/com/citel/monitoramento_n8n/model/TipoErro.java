@@ -48,7 +48,7 @@ public class TipoErro {
     @Column(name = "MSG_CODERR", nullable = false, length = 60)
     private String codigoErro;
 
-    /** STA_CODIGO da STAERR: 2 = culpa nossa, 3 = não é culpa nossa. */
+    /** STA_CODIGO da STAERR: 0 não informado, 1 nossa, 2 cliente, 3 instabilidade, 4 plataforma externa. */
     @Column(name = "MSG_CODSTA", nullable = false)
     private Integer status;
 

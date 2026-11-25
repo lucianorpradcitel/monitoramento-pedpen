@@ -8,7 +8,9 @@ import com.citel.monitoramento_n8n.DTO.ProdutoDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoLoteDTO;
 import com.citel.monitoramento_n8n.DTO.ProdutoRemovidoDTO;
 import com.citel.monitoramento_n8n.model.Produto;
+import com.citel.monitoramento_n8n.model.Usuario;
 import com.citel.monitoramento_n8n.service.ProdutoService;
+import com.citel.monitoramento_n8n.service.ResponsabilidadeErro;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -19,6 +21,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -51,7 +54,7 @@ public class ProdutoController {
         return ResponseEntity.ok(service.registrarProduto(request));
     }
 
-    @Operation(summary = "Liga o erro do produto ao tipo de erro (responsabilidade 2/3)",
+    @Operation(summary = "Liga o erro do produto ao tipo de erro (responsabilidade 0 a 4)",
             description = """
                     Grava só o PRO_CODMSG (CADMSG.MSG_CODIGO): não soma tentativa e não mexe na mensagem. \
                     É o último passo do n8n: grava o erro no POST /produtos, classifica no SUB_Error_Status \
@@ -147,6 +150,15 @@ public class ProdutoController {
                     em todos os registros e não só na página atual. `cliente` e `plataforma` são
                     exatos; as opções válidas vêm do GET /produtos/filtros.
 
+                    `responsabilidade` filtra pelo tipo do erro (CADMSG.MSG_CODSTA): 0 não informado
+                    (inclui o erro ainda sem tipo), 1 culpa nossa, 2 culpa do cliente, 3 instabilidade,
+                    4 culpa da plataforma externa. Aceita mais de um valor (`?responsabilidade=1&responsabilidade=0`
+                    ou `?responsabilidade=1,0`); omitido, traz todas. Cada produto da resposta traz o campo
+                    `responsabilidade`. Valor fora de 0 a 4 é recusado com 422.
+
+                    O perfil USR só enxerga as responsabilidades 2 e 4: sem o parâmetro, vêm só essas, e pedir
+                    outra é recusado com 403. DEV, ADM e o n8n enxergam todas.
+
                     A resposta é paginada: `pagina` começa em 1 (padrão 1) e `tamanho` aceita 50, 100
                     ou 1000 (padrão 50), ou 0 para trazer todos os registros numa única página.
                     Qualquer outro valor é recusado com 422. Com `tamanho=0` a `pagina` é ignorada e
@@ -162,6 +174,7 @@ public class ProdutoController {
                     content = { @Content(mediaType = "application/json",
                             schema = @Schema(implementation = PaginaDTO.class)) }),
             @ApiResponse(responseCode = "400", description = "status, tentativas, pagina, tamanho ou datas em formato inválido"),
+            @ApiResponse(responseCode = "403", description = "Perfil USR pediu uma responsabilidade diferente de 2 e 4"),
             @ApiResponse(responseCode = "422", description = "status diferente de 0 e 1, faixa de tentativas ou de datas impossível, pagina menor que 1, tamanho diferente de 50, 100, 1000 e 0 ou ordem diferente de asc e desc"),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
@@ -186,6 +199,8 @@ public class ProdutoController {
             @RequestParam(required = false) String produtoContem,
             @Parameter(description = "Pesquisa na mensagem de erro: traz as que CONTÊM o texto, sem distinguir maiúsculas")
             @RequestParam(required = false) String erroContem,
+            @Parameter(description = "Só erros destas responsabilidades (0 a 4): 0 não informado, 1 culpa nossa, 2 cliente, 3 instabilidade, 4 plataforma. Repita o parâmetro ou separe por vírgula. Omitido, traz todas")
+            @RequestParam(required = false) List<Integer> responsabilidade,
             @Parameter(description = "Página a retornar, a partir de 1")
             @RequestParam(defaultValue = "1") int pagina,
             @Parameter(description = "Registros por página: 50, 100 ou 1000; 0 traz todos numa só página",
@@ -193,11 +208,13 @@ public class ProdutoController {
             @RequestParam(defaultValue = "50") int tamanho,
             @Parameter(description = "Ordem pela data do erro: desc (mais recente primeiro, padrão) ou asc (mais antigo primeiro)",
                     schema = @Schema(allowableValues = {"desc", "asc"}, defaultValue = "desc"))
-            @RequestParam(defaultValue = "desc") String ordem
+            @RequestParam(defaultValue = "desc") String ordem,
+            @AuthenticationPrincipal Usuario usuario
     ) {
         return ResponseEntity.ok(service.retornarProdutos(
                 status, codigoProduto, cliente, idIntegracao, tentativaMaiorQue, tentativaMenorQue,
                 dataInicial, dataFinal, plataforma, produtoContem, erroContem,
+                ResponsabilidadeErro.permitidas(usuario, responsabilidade),
                 pagina, tamanho, ordem));
     }
 

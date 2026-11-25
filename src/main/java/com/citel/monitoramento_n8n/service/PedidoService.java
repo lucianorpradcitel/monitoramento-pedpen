@@ -2,6 +2,7 @@ package com.citel.monitoramento_n8n.service;
 
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
+import com.citel.monitoramento_n8n.exception.BusinessException;
 import com.citel.monitoramento_n8n.exception.ConflictException;
 import com.citel.monitoramento_n8n.exception.NotFoundException;
 import com.citel.monitoramento_n8n.model.Pedido;
@@ -143,8 +144,19 @@ public class PedidoService {
         return repository.save(pedido);
     }
 
+    /** Responsabilidades válidas (STAERR): 0 não informado, 1 nossa, 2 cliente, 3 instabilidade, 4 plataforma. */
+    private static final List<Integer> RESPONSABILIDADES = List.of(0, 1, 2, 3, 4);
+
+    /** {@code responsabilidades}: 0 a 4 (pedido sem tipo vale 0); nulo ou vazio = todas. */
     public List<Pedido> retornarPedidos(List<Integer> status, String cliente, String codigoPedido,
-                                        String idIntegracao, LocalDate data) {
+                                        String idIntegracao, LocalDate data, List<Integer> responsabilidades) {
+        // Sem o parâmetro vale a lista inteira (0 a 4): quem já usava a API não percebe mudança.
+        List<Integer> responsabilidadesFiltro = (responsabilidades == null || responsabilidades.isEmpty())
+                ? RESPONSABILIDADES
+                : responsabilidades;
+        if (!RESPONSABILIDADES.containsAll(responsabilidadesFiltro)) {
+            throw new BusinessException("responsabilidade deve ser de 0 a 4, mas veio " + responsabilidadesFiltro);
+        }
         List<Integer> statusFiltro = status == null
                 ? List.of()
                 : status.stream().filter(Objects::nonNull).distinct().toList();
@@ -162,7 +174,8 @@ public class PedidoService {
                 normalizar(cliente),
                 normalizar(codigoPedido),
                 normalizar(idIntegracao),
-                data);
+                data,
+                responsabilidadesFiltro);
     }
 
     /** Query param em branco (?cliente=) vale como ausente, e não como "cliente igual a vazio". */

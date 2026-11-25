@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
@@ -26,6 +27,7 @@ public interface ProdutoRepository extends JpaRepository<Produto, String> {
           AND (:plataforma IS NULL OR p.plataforma = :plataforma)
           AND (:produtoContem IS NULL OR LOWER(p.codigoProduto) LIKE LOWER(CONCAT('%', :produtoContem, '%')) ESCAPE '!')
           AND (:erroContem IS NULL OR LOWER(p.mensagemErro) LIKE LOWER(CONCAT('%', :erroContem, '%')) ESCAPE '!')
+          AND p.responsabilidade IN :responsabilidades
         """)
     Page<Produto> buscar(@Param("status") int status,
                          @Param("codigoProduto") String codigoProduto,
@@ -38,6 +40,7 @@ public interface ProdutoRepository extends JpaRepository<Produto, String> {
                          @Param("plataforma") String plataforma,
                          @Param("produtoContem") String produtoContem,
                          @Param("erroContem") String erroContem,
+                         @Param("responsabilidades") Collection<Integer> responsabilidades,
                          Pageable pageable);
 
     /**

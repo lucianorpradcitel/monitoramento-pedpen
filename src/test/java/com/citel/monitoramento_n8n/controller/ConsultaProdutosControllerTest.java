@@ -11,6 +11,7 @@ import com.citel.monitoramento_n8n.repository.UsuarioRepository;
 import com.citel.monitoramento_n8n.security.SecurityFilter;
 import com.citel.monitoramento_n8n.service.ProdutoService;
 import com.citel.monitoramento_n8n.service.TokenService;
+import com.citel.monitoramento_n8n.model.Usuario;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -23,6 +24,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -58,7 +60,7 @@ class ConsultaProdutosControllerTest {
         mvc.perform(get("/produtos").with(user(lojista)))
                 .andExpect(status().isOk());
 
-        verify(service).retornarProdutos(0, null, null, null, null, null, null, null, null, null, null, 1, 50, "desc");
+        verify(service).retornarProdutos(0, null, null, null, null, null, null, null, null, null, null, null, 1, 50, "desc");
     }
 
     @Test
@@ -66,7 +68,7 @@ class ConsultaProdutosControllerTest {
         mvc.perform(get("/produtos").param("status", "1").param("cliente", "LOJA").with(user(lojista)))
                 .andExpect(status().isOk());
 
-        verify(service).retornarProdutos(1, null, "LOJA", null, null, null, null, null, null, null, null, 1, 50, "desc");
+        verify(service).retornarProdutos(1, null, "LOJA", null, null, null, null, null, null, null, null, null, 1, 50, "desc");
     }
 
     @Test
@@ -83,7 +85,7 @@ class ConsultaProdutosControllerTest {
         verify(service).retornarProdutos(0, null, null, null, null, null,
                 LocalDateTime.of(2026, 11, 5, 8, 0),
                 LocalDateTime.of(2026, 11, 5, 18, 30, 59, 999_000_000),
-                null, null, null,
+                null, null, null, null,
                 3, 100, "asc");
     }
 
@@ -97,7 +99,7 @@ class ConsultaProdutosControllerTest {
                 .andExpect(status().isOk());
 
         verify(service).retornarProdutos(0, null, null, null, null, null, null, null,
-                "Tray", "04464", "peso", 1, 50, "desc");
+                "Tray", "04464", "peso", null, 1, 50, "desc");
     }
 
     @Test
@@ -139,7 +141,7 @@ class ConsultaProdutosControllerTest {
 
     @Test
     void respostaTrazOsItensEOsTotais() throws Exception {
-        when(service.retornarProdutos(anyInt(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+        when(service.retornarProdutos(anyInt(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
                 anyInt(), anyInt(), any()))
                 .thenReturn(new PaginaDTO<>(List.of(new Produto()), 1, 50, 8342, 167));
 
@@ -154,7 +156,7 @@ class ConsultaProdutosControllerTest {
 
     @Test
     void tamanhoRecusadoPeloServiceViraUnprocessableEntity() throws Exception {
-        when(service.retornarProdutos(anyInt(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+        when(service.retornarProdutos(anyInt(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
                 anyInt(), anyInt(), any()))
                 .thenThrow(new BusinessException("tamanho deve ser 50, 100, 1000 ou 0 (todos), mas veio 25"));
 
@@ -178,5 +180,66 @@ class ConsultaProdutosControllerTest {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(service);
+    }
+
+    @Test
+    void responsabilidadeRepetidaOuSeparadaPorVirgulaChegaAoService() throws Exception {
+        mvc.perform(get("/produtos").param("responsabilidade", "1").param("responsabilidade", "0").with(user(lojista)))
+                .andExpect(status().isOk());
+        mvc.perform(get("/produtos").param("responsabilidade", "1,0").with(user(lojista)))
+                .andExpect(status().isOk());
+
+        // As duas formas da URL chegam como a mesma lista.
+        verify(service, times(2)).retornarProdutos(0, null, null, null, null, null, null, null, null, null, null,
+                List.of(1, 0), 1, 50, "desc");
+    }
+
+    private static Usuario interno(String perfil) {
+        Usuario usuario = new Usuario();
+        usuario.setId(7L);
+        usuario.setEmail("pessoa@citelsoftware.com.br");
+        usuario.setNome("Pessoa");
+        usuario.setAtivo("S");
+        usuario.setPerfil(perfil);
+        return usuario;
+    }
+
+    @Test
+    void usuarioComumSemFiltroVeSo2E4() throws Exception {
+        mvc.perform(get("/produtos").with(user(interno("USR"))))
+                .andExpect(status().isOk());
+
+        verify(service).retornarProdutos(0, null, null, null, null, null, null, null, null, null, null,
+                List.of(2, 4), 1, 50, "desc");
+    }
+
+    @Test
+    void usuarioComumPedindoResponsabilidadeDoTimeLevaForbidden() throws Exception {
+        mvc.perform(get("/produtos").param("responsabilidade", "1").with(user(interno("USR"))))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/produtos").param("responsabilidade", "2,0").with(user(interno("USR"))))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void usuarioComumPodePedirSo2() throws Exception {
+        mvc.perform(get("/produtos").param("responsabilidade", "2").with(user(interno("USR"))))
+                .andExpect(status().isOk());
+
+        verify(service).retornarProdutos(0, null, null, null, null, null, null, null, null, null, null,
+                List.of(2), 1, 50, "desc");
+    }
+
+    @Test
+    void devEAdmVeemQualquerResponsabilidade() throws Exception {
+        mvc.perform(get("/produtos").param("responsabilidade", "1,0").with(user(interno("DEV"))))
+                .andExpect(status().isOk());
+        mvc.perform(get("/produtos").param("responsabilidade", "1,0").with(user(interno("ADM"))))
+                .andExpect(status().isOk());
+
+        verify(service, times(2)).retornarProdutos(0, null, null, null, null, null, null, null, null, null, null,
+                List.of(1, 0), 1, 50, "desc");
     }
 }

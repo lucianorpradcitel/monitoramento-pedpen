@@ -47,6 +47,6 @@ public class PedidoDTO {
      * e o tipo vai junto: omitido, o pedido fica sem tipo.
      */
     @Setter
-    @Schema(description = "Tipo do erro (CADMSG.MSG_CODIGO), que define a responsabilidade 2/3. Opcional.")
+    @Schema(description = "Tipo do erro (CADMSG.MSG_CODIGO), que define a responsabilidade (0 a 4). Opcional.")
     private Integer codigoMensagem;
 }

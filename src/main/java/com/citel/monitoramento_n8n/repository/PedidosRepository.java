@@ -22,6 +22,7 @@ public interface PedidosRepository extends JpaRepository<Pedido, String> {
           AND (:codigoPedido IS NULL OR p.codigoPedido = :codigoPedido)
           AND (:idIntegracao IS NULL OR p.idIntegracao = :idIntegracao)
           AND (:data IS NULL OR CAST(p.dataPedido AS DATE) = :data)
+          AND p.responsabilidade IN :responsabilidades
         ORDER BY p.dataPedido DESC
         """)
     List<Pedido> buscarPorStatus(@Param("filtrarStatus") boolean filtrarStatus,
@@ -29,5 +30,6 @@ public interface PedidosRepository extends JpaRepository<Pedido, String> {
                                  @Param("cliente") String cliente,
                                  @Param("codigoPedido") String codigoPedido,
                                  @Param("idIntegracao") String idIntegracao,
-                                 @Param("data") LocalDate data);
+                                 @Param("data") LocalDate data,
+                                 @Param("responsabilidades") Collection<Integer> responsabilidades);
 }

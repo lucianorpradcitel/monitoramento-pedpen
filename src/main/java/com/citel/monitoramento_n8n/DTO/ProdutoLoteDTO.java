@@ -24,7 +24,7 @@ public class ProdutoLoteDTO {
     private String idIntegracao;
 
     /** CADMSG.MSG_CODIGO do tipo do erro. Opcional: no registro de erro, omitido limpa o tipo. */
-    @Schema(description = "Tipo do erro (CADMSG.MSG_CODIGO), que define a responsabilidade 2/3. Opcional.")
+    @Schema(description = "Tipo do erro (CADMSG.MSG_CODIGO), que define a responsabilidade (0 a 4). Opcional.")
     private Integer codigoMensagem;
 
     /**
