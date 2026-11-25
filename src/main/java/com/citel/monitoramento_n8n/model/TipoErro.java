@@ -30,11 +30,6 @@ public class TipoErro {
     public static final String VALIDADO = "S";
     public static final String NAO_VALIDADO = "N";
 
-    /** MSG_ORIGEM: quem cadastrou. */
-    public static final String ORIGEM_CARGA = "C";
-    public static final String ORIGEM_IA = "I";
-    public static final String ORIGEM_USUARIO = "U";
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "MSG_CODIGO")
@@ -54,9 +49,6 @@ public class TipoErro {
 
     @Column(name = "MSG_VALIDA", nullable = false, length = 1)
     private String validado = NAO_VALIDADO;
-
-    @Column(name = "MSG_ORIGEM", nullable = false, length = 1)
-    private String origem;
 
     /** Uma mensagem real de exemplo, para quem for validar. */
     @Column(name = "MSG_EXEMPL")

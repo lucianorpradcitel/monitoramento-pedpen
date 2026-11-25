@@ -6,8 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Request do POST /tipos-erro. Validado e origem não vêm do corpo: o service decide pelo login
- * (n8n grava como IA e não validado; admin pelo portal grava como usuário e já validado).
+ * Request do POST /tipos-erro. Validado não vem do corpo: o service decide pelo login
+ * (n8n grava como não validado; admin pelo portal grava já validado).
  * Campos a mais no JSON são ignorados.
  */
 public record DadosCriacaoTipoErro(

@@ -96,17 +96,15 @@ public class TipoErroService {
 
         if (usuario != null) {
             // Cadastro manual pelo portal: quem cadastra já está validando.
-            novo.setOrigem(TipoErro.ORIGEM_USUARIO);
             marcarValidado(novo, usuario);
         } else {
-            novo.setOrigem(TipoErro.ORIGEM_IA);
             novo.setValidado(TipoErro.NAO_VALIDADO);
         }
 
         try {
             TipoErro salvo = tipoErroRepository.saveAndFlush(novo);
-            log.info("Tipo de erro criado - código: {}, plataforma: {}, erro: {}, status: {}, origem: {}",
-                    salvo.getCodigo(), plataforma, codigoErro, salvo.getStatus(), salvo.getOrigem());
+            log.info("Tipo de erro criado - código: {}, plataforma: {}, erro: {}, status: {}",
+                    salvo.getCodigo(), plataforma, codigoErro, salvo.getStatus());
             return new Registro(TipoErroDTO.de(salvo), true);
         } catch (DataIntegrityViolationException e) {
             log.info("Tipo de erro gravado ao mesmo tempo por outra requisição - plataforma: {}, erro: {}",
