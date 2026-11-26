@@ -106,13 +106,18 @@ public class ProdutoController {
 
                     Os dois filtros se restringem um ao outro: com `plataforma`, `clientes` traz só
                     os que têm produto naquela plataforma; com `cliente`, `plataformas` traz só as
-                    em que ele tem produto. Cada lista ignora o próprio filtro.""")
+                    em que ele tem produto. Cada lista ignora o próprio filtro.
+
+                    `responsabilidade` (0 a 4; repetido ou separado por vírgula; omitido, todas) traz só as
+                    opções de quem tem produto com erro dessas responsabilidades, como no GET /produtos. O
+                    perfil USR só enxerga 2 e 4: sem o parâmetro vêm só essas, e pedir outra é recusado com 403.""")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Clientes e plataformas com produto no status",
                     content = { @Content(mediaType = "application/json",
                             schema = @Schema(implementation = FiltrosProdutosDTO.class)) }),
             @ApiResponse(responseCode = "400", description = "status em formato inválido"),
-            @ApiResponse(responseCode = "422", description = "status diferente de 0 e 1"),
+            @ApiResponse(responseCode = "403", description = "Perfil USR pediu uma responsabilidade diferente de 2 e 4"),
+            @ApiResponse(responseCode = "422", description = "status diferente de 0 e 1 ou responsabilidade fora de 0 a 4"),
             @ApiResponse(responseCode = "500", description = "Erro interno no servidor")
     })
     @GetMapping("/filtros")
@@ -122,9 +127,13 @@ public class ProdutoController {
             @Parameter(description = "Restringe as plataformas às em que este cliente (exato) tem produto")
             @RequestParam(required = false) String cliente,
             @Parameter(description = "Restringe os clientes aos que têm produto nesta plataforma (exata)")
-            @RequestParam(required = false) String plataforma
+            @RequestParam(required = false) String plataforma,
+            @Parameter(description = "Só quem tem produto com erro destas responsabilidades (0 a 4). Repita o parâmetro ou separe por vírgula. Omitido, todas")
+            @RequestParam(required = false) List<Integer> responsabilidade,
+            @AuthenticationPrincipal Usuario usuario
     ) {
-        return ResponseEntity.ok(service.retornarFiltros(status, cliente, plataforma));
+        return ResponseEntity.ok(service.retornarFiltros(status, cliente, plataforma,
+                ResponsabilidadeErro.permitidas(usuario, responsabilidade)));
     }
 
     @Operation(summary = "Lista os produtos com erro de integração, filtrando pelo status e paginando",

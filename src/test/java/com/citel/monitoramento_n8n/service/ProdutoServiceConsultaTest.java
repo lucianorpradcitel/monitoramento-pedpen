@@ -189,10 +189,10 @@ class ProdutoServiceConsultaTest {
 
     @Test
     void filtrosTrazClientesEPlataformasDoStatusPedido() {
-        when(repository.clientesComProduto(1, null)).thenReturn(List.of("LOJA", "OUTRA"));
-        when(repository.plataformasComProduto(1, null)).thenReturn(List.of("Tray"));
+        when(repository.clientesComProduto(1, null, List.of(0, 1, 2, 3, 4))).thenReturn(List.of("LOJA", "OUTRA"));
+        when(repository.plataformasComProduto(1, null, List.of(0, 1, 2, 3, 4))).thenReturn(List.of("Tray"));
 
-        FiltrosProdutosDTO filtros = service.retornarFiltros(1, null, null);
+        FiltrosProdutosDTO filtros = service.retornarFiltros(1, null, null, null);
 
         assertThat(filtros.clientes()).containsExactly("LOJA", "OUTRA");
         assertThat(filtros.plataformas()).containsExactly("Tray");
@@ -200,11 +200,11 @@ class ProdutoServiceConsultaTest {
 
     @Test
     void filtrosSeRestringemUmAoOutroEIgnoramOProprioFiltro() {
-        when(repository.clientesComProduto(0, "Tray")).thenReturn(List.of("LOJA"));
-        when(repository.plataformasComProduto(0, "OUTRA")).thenReturn(List.of("VTEX"));
+        when(repository.clientesComProduto(0, "Tray", List.of(0, 1, 2, 3, 4))).thenReturn(List.of("LOJA"));
+        when(repository.plataformasComProduto(0, "OUTRA", List.of(0, 1, 2, 3, 4))).thenReturn(List.of("VTEX"));
 
         // A plataforma escolhida limita os clientes; o cliente escolhido limita as plataformas.
-        FiltrosProdutosDTO filtros = service.retornarFiltros(0, "OUTRA", "Tray");
+        FiltrosProdutosDTO filtros = service.retornarFiltros(0, "OUTRA", "Tray", null);
 
         assertThat(filtros.clientes()).containsExactly("LOJA");
         assertThat(filtros.plataformas()).containsExactly("VTEX");
@@ -212,10 +212,10 @@ class ProdutoServiceConsultaTest {
 
     @Test
     void filtrosEmBrancoNaoRestringem() {
-        when(repository.clientesComProduto(0, null)).thenReturn(List.of("LOJA"));
-        when(repository.plataformasComProduto(0, null)).thenReturn(List.of("Tray"));
+        when(repository.clientesComProduto(0, null, List.of(0, 1, 2, 3, 4))).thenReturn(List.of("LOJA"));
+        when(repository.plataformasComProduto(0, null, List.of(0, 1, 2, 3, 4))).thenReturn(List.of("Tray"));
 
-        FiltrosProdutosDTO filtros = service.retornarFiltros(0, "  ", "");
+        FiltrosProdutosDTO filtros = service.retornarFiltros(0, "  ", "", null);
 
         assertThat(filtros.clientes()).containsExactly("LOJA");
         assertThat(filtros.plataformas()).containsExactly("Tray");
@@ -223,7 +223,7 @@ class ProdutoServiceConsultaTest {
 
     @Test
     void filtrosComStatusInvalidoERecusadoSemConsultar() {
-        assertThatThrownBy(() -> service.retornarFiltros(2, null, null))
+        assertThatThrownBy(() -> service.retornarFiltros(2, null, null, null))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("0 ou 1");
 
@@ -297,6 +297,26 @@ class ProdutoServiceConsultaTest {
     @Test
     void responsabilidadeForaDeZeroAQuatroEhRecusada() {
         assertThatThrownBy(() -> service.retornarProdutos(0, null, null, null, null, null, null, null, null, null, null, List.of(1, 5), 1, 50, "desc"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("0 a 4");
+
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void filtrosRespeitamAResponsabilidadePedida() {
+        when(repository.clientesComProduto(0, null, List.of(2, 4))).thenReturn(List.of("LOJA"));
+        when(repository.plataformasComProduto(0, null, List.of(2, 4))).thenReturn(List.of("Climba"));
+
+        FiltrosProdutosDTO filtros = service.retornarFiltros(0, null, null, List.of(2, 4));
+
+        assertThat(filtros.clientes()).containsExactly("LOJA");
+        assertThat(filtros.plataformas()).containsExactly("Climba");
+    }
+
+    @Test
+    void filtrosRecusamResponsabilidadeForaDeZeroAQuatro() {
+        assertThatThrownBy(() -> service.retornarFiltros(0, null, null, List.of(7)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("0 a 4");
 

@@ -38,9 +38,6 @@ public class ProdutoService {
     /** Todo registro nasce com uma tentativa: o POST que o criou. */
     private static final int PRIMEIRA_TENTATIVA = 1;
 
-    /** Responsabilidades válidas (STAERR): 0 não informado, 1 nossa, 2 cliente, 3 instabilidade, 4 plataforma. */
-    private static final List<Integer> RESPONSABILIDADES = List.of(0, 1, 2, 3, 4);
-
     /** Registros por página que o GET /produtos aceita, além de {@link #TAMANHO_TODOS}. */
     private static final Set<Integer> TAMANHOS_PERMITIDOS = Set.of(50, 100, 1000);
 
@@ -188,13 +185,8 @@ public class ProdutoService {
         // Recusar um status fora de 0/1 é melhor que devolver lista vazia, que se confunde com
         // "não há produtos nesse status".
         validarStatus(status);
-        // Sem o parâmetro vale a lista inteira (0 a 4): quem já usava a API não percebe mudança.
-        List<Integer> responsabilidadesFiltro = (responsabilidades == null || responsabilidades.isEmpty())
-                ? RESPONSABILIDADES
-                : responsabilidades;
-        if (!RESPONSABILIDADES.containsAll(responsabilidadesFiltro)) {
-            throw new BusinessException("responsabilidade deve ser de 0 a 4, mas veio " + responsabilidadesFiltro);
-        }
+        // Sem o parâmetro vale a lista inteira (0 a 4); fora de 0 a 4 é recusado.
+        List<Integer> responsabilidadesFiltro = ResponsabilidadeErro.validar(responsabilidades);
         // Com as duas pontas exclusivas, precisa sobrar pelo menos um inteiro no meio: menorQue
         // tem de ser no mínimo maiorQue + 2. Recusar é melhor que devolver lista vazia, que se
         // confunde com "não há produtos nessa faixa".
@@ -256,14 +248,19 @@ public class ProdutoService {
      * <p>Os dois filtros se restringem um ao outro: com {@code plataforma}, os clientes são só os que
      * têm produto nela; com {@code cliente}, as plataformas são só as em que ele tem produto. Cada
      * lista ignora o próprio filtro, para a escolha atual não esconder as demais opções.
+     *
+     * <p>{@code responsabilidades} (0 a 4; nulo ou vazio = todas) restringe às opções de quem tem produto
+     * com erro dessas responsabilidades: sem isso a tela de uma visão listaria clientes que nela não têm nada.
      */
-    public FiltrosProdutosDTO retornarFiltros(int status, String cliente, String plataforma) {
+    public FiltrosProdutosDTO retornarFiltros(int status, String cliente, String plataforma,
+                                              List<Integer> responsabilidades) {
         validarStatus(status);
+        List<Integer> responsabilidadesFiltro = ResponsabilidadeErro.validar(responsabilidades);
         String clienteEscolhido = StringUtils.hasText(cliente) ? cliente : null;
         String plataformaEscolhida = StringUtils.hasText(plataforma) ? plataforma : null;
         return new FiltrosProdutosDTO(
-                repository.clientesComProduto(status, plataformaEscolhida),
-                repository.plataformasComProduto(status, clienteEscolhido));
+                repository.clientesComProduto(status, plataformaEscolhida, responsabilidadesFiltro),
+                repository.plataformasComProduto(status, clienteEscolhido, responsabilidadesFiltro));
     }
 
     /** "desc" (padrão, mais recente primeiro) ou "asc" (mais antigo primeiro), sem distinguir caixa. */

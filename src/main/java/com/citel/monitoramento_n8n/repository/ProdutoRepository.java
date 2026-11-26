@@ -51,9 +51,11 @@ public interface ProdutoRepository extends JpaRepository<Produto, String> {
         SELECT DISTINCT p.cliente FROM Produto p
         WHERE p.status = :status AND p.cliente IS NOT NULL
           AND (:plataforma IS NULL OR p.plataforma = :plataforma)
+          AND p.responsabilidade IN :responsabilidades
         ORDER BY p.cliente
         """)
-    List<String> clientesComProduto(@Param("status") int status, @Param("plataforma") String plataforma);
+    List<String> clientesComProduto(@Param("status") int status, @Param("plataforma") String plataforma,
+                                    @Param("responsabilidades") Collection<Integer> responsabilidades);
 
     /**
      * Plataformas que têm produto no status, para o filtro de plataforma da tela. Sem repetir e sem nulos.
@@ -63,9 +65,22 @@ public interface ProdutoRepository extends JpaRepository<Produto, String> {
         SELECT DISTINCT p.plataforma FROM Produto p
         WHERE p.status = :status AND p.plataforma IS NOT NULL
           AND (:cliente IS NULL OR p.cliente = :cliente)
+          AND p.responsabilidade IN :responsabilidades
         ORDER BY p.plataforma
         """)
-    List<String> plataformasComProduto(@Param("status") int status, @Param("cliente") String cliente);
+    List<String> plataformasComProduto(@Param("status") int status, @Param("cliente") String cliente,
+                                       @Param("responsabilidades") Collection<Integer> responsabilidades);
+
+    /**
+     * Quantos produtos há no status, por responsabilidade do tipo do erro (erro sem tipo conta como 0). Cada linha
+     * é {responsabilidade, total}; só vêm as responsabilidades que têm algum produto.
+     */
+    @Query("""
+        SELECT p.responsabilidade, COUNT(p) FROM Produto p
+        WHERE p.status = :status
+        GROUP BY p.responsabilidade
+        """)
+    List<Object[]> contarPorResponsabilidade(@Param("status") int status);
 
     /**
      * Apaga o produto em TODAS as rotinas em que ele aparece: a rotina de propósito não entra

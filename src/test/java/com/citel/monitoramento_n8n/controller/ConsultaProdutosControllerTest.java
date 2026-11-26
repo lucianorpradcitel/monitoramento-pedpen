@@ -104,7 +104,7 @@ class ConsultaProdutosControllerTest {
 
     @Test
     void filtrosTrazOsClientesEAsPlataformasComProduto() throws Exception {
-        when(service.retornarFiltros(0, null, null))
+        when(service.retornarFiltros(0, null, null, null))
                 .thenReturn(new FiltrosProdutosDTO(List.of("LOJA", "OUTRA"), List.of("Tray", "VTEX")));
 
         mvc.perform(get("/produtos/filtros").with(user(lojista)))
@@ -119,7 +119,7 @@ class ConsultaProdutosControllerTest {
         mvc.perform(get("/produtos/filtros").param("status", "1").with(user(lojista)))
                 .andExpect(status().isOk());
 
-        verify(service).retornarFiltros(1, null, null);
+        verify(service).retornarFiltros(1, null, null, null);
     }
 
     @Test
@@ -128,12 +128,12 @@ class ConsultaProdutosControllerTest {
                         .with(user(lojista)))
                 .andExpect(status().isOk());
 
-        verify(service).retornarFiltros(0, "LOJA", "Tray");
+        verify(service).retornarFiltros(0, "LOJA", "Tray", null);
     }
 
     @Test
     void filtrosComStatusRecusadoPeloServiceViraUnprocessableEntity() throws Exception {
-        when(service.retornarFiltros(2, null, null)).thenThrow(new BusinessException("status deve ser 0 ou 1, mas veio 2"));
+        when(service.retornarFiltros(2, null, null, null)).thenThrow(new BusinessException("status deve ser 0 ou 1, mas veio 2"));
 
         mvc.perform(get("/produtos/filtros").param("status", "2").with(user(lojista)))
                 .andExpect(status().isUnprocessableEntity());
@@ -241,5 +241,31 @@ class ConsultaProdutosControllerTest {
 
         verify(service, times(2)).retornarProdutos(0, null, null, null, null, null, null, null, null, null, null,
                 List.of(1, 0), 1, 50, "desc");
+    }
+
+    @Test
+    void filtrosDoUsuarioComumSoVeem2E4() throws Exception {
+        mvc.perform(get("/produtos/filtros").with(user(interno("USR"))))
+                .andExpect(status().isOk());
+
+        verify(service).retornarFiltros(0, null, null, List.of(2, 4));
+    }
+
+    @Test
+    void filtrosDoUsuarioComumPedindoOutraResponsabilidadeLevamForbidden() throws Exception {
+        mvc.perform(get("/produtos/filtros").param("responsabilidade", "1").with(user(interno("USR"))))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void filtrosDeDevELojistaPassamOQuePediram() throws Exception {
+        mvc.perform(get("/produtos/filtros").param("responsabilidade", "1,0").with(user(interno("DEV"))))
+                .andExpect(status().isOk());
+        mvc.perform(get("/produtos/filtros").param("responsabilidade", "1,0").with(user(lojista)))
+                .andExpect(status().isOk());
+
+        verify(service, times(2)).retornarFiltros(0, null, null, List.of(1, 0));
     }
 }
