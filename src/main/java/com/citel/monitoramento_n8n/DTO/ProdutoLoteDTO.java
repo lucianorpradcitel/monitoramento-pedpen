@@ -23,8 +23,8 @@ public class ProdutoLoteDTO {
     @Schema(description = "Código da integração (CADINT.INT_CODAUT). Opcional.")
     private String idIntegracao;
 
-    /** CADMSG.MSG_CODIGO do tipo do erro. Opcional: no registro de erro, omitido limpa o tipo. */
-    @Schema(description = "Tipo do erro (CADMSG.MSG_CODIGO), que define a responsabilidade 2/3. Opcional.")
+    /** CADERR.MSG_CODIGO do tipo do erro. Opcional: no registro de erro, omitido limpa o tipo. */
+    @Schema(description = "Tipo do erro (CADERR.MSG_CODIGO), que define a responsabilidade (0 a 4). Opcional.")
     private Integer codigoMensagem;
 
     /**

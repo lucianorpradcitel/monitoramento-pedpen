@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Formula;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -41,11 +42,19 @@ public class Produto {
     @Column(name="PRO_TENTAT")
     private int tentativa;
     /**
-     * Tipo do erro (CADMSG.MSG_CODIGO), que diz a responsabilidade: 2 = culpa nossa, 3 = não é culpa
-     * nossa. Nulo = erro ainda sem tipo. Acompanha a mensagem: mensagem nova sem código limpa o tipo.
+     * Tipo do erro (CADERR.MSG_CODIGO), que define a responsabilidade (veja {@link #responsabilidade}).
+     * Nulo = erro ainda sem tipo. Acompanha a mensagem: mensagem nova sem código limpa o tipo.
      */
     @Column(name="PRO_CODMSG")
     private Integer codigoMensagem;
+    /**
+     * Responsabilidade do erro, lida do tipo (CADERR.MSG_CODSTA): 0 = não informado, 1 = culpa nossa,
+     * 2 = culpa do cliente, 3 = instabilidade, 4 = culpa da plataforma externa. Erro sem tipo vale 0.
+     * Campo calculado pelo banco a cada leitura e só de leitura: quem manda é o tipo, e reclassificar o
+     * tipo muda todos os erros ligados a ele. Em um produto recém-gravado vem nulo até a próxima leitura.
+     */
+    @Formula("COALESCE((SELECT m.MSG_CODSTA FROM CADERR m WHERE m.MSG_CODIGO = PRO_CODMSG), 0)")
+    private Integer responsabilidade;
 
     public Produto() {
         this.id = UUID.randomUUID().toString();

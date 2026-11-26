@@ -15,6 +15,17 @@ public interface PedidosRepository extends JpaRepository<Pedido, String> {
 
     List<Pedido> findByClienteInAndCodigoPedidoIn(List<String> clientes, List<String> codigosPedido);
 
+    /**
+     * Quantos pedidos há no status, por responsabilidade do tipo do erro (pedido sem tipo conta como 0). Cada linha
+     * é {responsabilidade, total}; só vêm as responsabilidades que têm algum pedido.
+     */
+    @Query("""
+        SELECT p.responsabilidade, COUNT(p) FROM Pedido p
+        WHERE p.status = :status
+        GROUP BY p.responsabilidade
+        """)
+    List<Object[]> contarPorResponsabilidade(@Param("status") int status);
+
     @Query("""
         SELECT p FROM Pedido p
         WHERE (:filtrarStatus = FALSE OR p.status IN :status)
@@ -22,6 +33,7 @@ public interface PedidosRepository extends JpaRepository<Pedido, String> {
           AND (:codigoPedido IS NULL OR p.codigoPedido = :codigoPedido)
           AND (:idIntegracao IS NULL OR p.idIntegracao = :idIntegracao)
           AND (:data IS NULL OR CAST(p.dataPedido AS DATE) = :data)
+          AND p.responsabilidade IN :responsabilidades
         ORDER BY p.dataPedido DESC
         """)
     List<Pedido> buscarPorStatus(@Param("filtrarStatus") boolean filtrarStatus,
@@ -29,5 +41,6 @@ public interface PedidosRepository extends JpaRepository<Pedido, String> {
                                  @Param("cliente") String cliente,
                                  @Param("codigoPedido") String codigoPedido,
                                  @Param("idIntegracao") String idIntegracao,
-                                 @Param("data") LocalDate data);
+                                 @Param("data") LocalDate data,
+                                 @Param("responsabilidades") Collection<Integer> responsabilidades);
 }

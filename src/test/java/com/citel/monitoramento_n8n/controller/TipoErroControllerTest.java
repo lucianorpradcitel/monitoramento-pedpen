@@ -44,7 +44,7 @@ class TipoErroControllerTest {
 
     private static final String CORPO = """
             {"plataforma":"1005","codigoErro":"categoria_ausente","status":3,
-             "validado":"N","origem":"I","exemplo":"Produto sem categoria","idExemplo":"PRO-1"}""";
+             "validado":"N","exemplo":"Produto sem categoria","idExemplo":"PRO-1"}""";
 
     @Autowired
     MockMvc mvc;
@@ -71,7 +71,7 @@ class TipoErroControllerTest {
     }
 
     private static TipoErroDTO dto(int codigo, int status, String validado) {
-        return new TipoErroDTO(codigo, "1005", "categoria_ausente", status, validado, "I",
+        return new TipoErroDTO(codigo, "1005", "categoria_ausente", status, validado,
                 "Produto sem categoria", "PRO-1", null, null, null);
     }
 

@@ -51,7 +51,6 @@ class TipoErroServiceTest {
         t.setCodigoErro("categoria_ausente");
         t.setStatus(status);
         t.setValidado(validado);
-        t.setOrigem(TipoErro.ORIGEM_IA);
         return t;
     }
 
@@ -84,7 +83,7 @@ class TipoErroServiceTest {
     }
 
     @Test
-    void n8nGravaComoIaENaoValidado() {
+    void n8nGravaNaoValidado() {
         when(tipoErroRepository.findByPlataformaAndCodigoErro("1005", "categoria_ausente")).thenReturn(Optional.empty());
         plataformaEStatusExistem();
         when(tipoErroRepository.saveAndFlush(any(TipoErro.class))).thenAnswer(c -> {
@@ -100,7 +99,6 @@ class TipoErroServiceTest {
         assertThat(dto.codigo()).isEqualTo(8);
         assertThat(dto.plataforma()).isEqualTo("1005");
         assertThat(dto.codigoErro()).isEqualTo("categoria_ausente");
-        assertThat(dto.origem()).isEqualTo("I");
         assertThat(dto.validado()).isEqualTo("N");
         assertThat(dto.usuarioValidacao()).isNull();
         assertThat(dto.dataCadastro()).isNotNull();
@@ -108,14 +106,13 @@ class TipoErroServiceTest {
     }
 
     @Test
-    void adminPeloPortalGravaComoUsuarioJaValidado() {
+    void adminPeloPortalGravaJaValidado() {
         when(tipoErroRepository.findByPlataformaAndCodigoErro("1005", "categoria_ausente")).thenReturn(Optional.empty());
         plataformaEStatusExistem();
         when(tipoErroRepository.saveAndFlush(any(TipoErro.class))).thenAnswer(c -> c.getArgument(0));
 
         TipoErroDTO dto = service.registrar(dados(3), admin()).tipo();
 
-        assertThat(dto.origem()).isEqualTo("U");
         assertThat(dto.validado()).isEqualTo("S");
         assertThat(dto.usuarioValidacao()).isEqualTo("gabriel.beraldo");
         assertThat(dto.dataValidacao()).isNotNull();

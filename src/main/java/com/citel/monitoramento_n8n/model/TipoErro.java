@@ -12,7 +12,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * Tipo de erro de integração (CADMSG): plataforma + código estável + responsabilidade (2 ou 3).
+ * Tipo de erro de integração (CADERR): plataforma + código estável + responsabilidade (2 ou 3).
  *
  * A responsabilidade fica no tipo, não em cada erro: PROERR.PRO_CODMSG e PEDPEN.PEN_CODMSG apontam para
  * MSG_CODIGO, então reclassificar o tipo muda todos os erros ligados a ele de uma vez.
@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
  * contam como iguais na busca e na chave.
  */
 @Entity
-@Table(name = "CADMSG")
+@Table(name = "CADERR")
 @Getter
 @Setter
 public class TipoErro {
@@ -29,11 +29,6 @@ public class TipoErro {
     /** 'S'/'N' em MSG_VALIDA. */
     public static final String VALIDADO = "S";
     public static final String NAO_VALIDADO = "N";
-
-    /** MSG_ORIGEM: quem cadastrou. */
-    public static final String ORIGEM_CARGA = "C";
-    public static final String ORIGEM_IA = "I";
-    public static final String ORIGEM_USUARIO = "U";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,15 +43,12 @@ public class TipoErro {
     @Column(name = "MSG_CODERR", nullable = false, length = 60)
     private String codigoErro;
 
-    /** STA_CODIGO da STAERR: 2 = culpa nossa, 3 = não é culpa nossa. */
+    /** STA_CODIGO da STAERR: 0 não informado, 1 nossa, 2 cliente, 3 instabilidade, 4 plataforma externa. */
     @Column(name = "MSG_CODSTA", nullable = false)
     private Integer status;
 
     @Column(name = "MSG_VALIDA", nullable = false, length = 1)
     private String validado = NAO_VALIDADO;
-
-    @Column(name = "MSG_ORIGEM", nullable = false, length = 1)
-    private String origem;
 
     /** Uma mensagem real de exemplo, para quem for validar. */
     @Column(name = "MSG_EXEMPL")

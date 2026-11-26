@@ -11,7 +11,6 @@ public record TipoErroDTO(
         String codigoErro,
         Integer status,
         String validado,
-        String origem,
         String exemplo,
         String idExemplo,
         LocalDateTime dataCadastro,
@@ -21,7 +20,7 @@ public record TipoErroDTO(
 
     public static TipoErroDTO de(TipoErro tipo) {
         return new TipoErroDTO(tipo.getCodigo(), tipo.getPlataforma(), tipo.getCodigoErro(), tipo.getStatus(),
-                tipo.getValidado(), tipo.getOrigem(), tipo.getExemplo(), tipo.getIdExemplo(),
+                tipo.getValidado(), tipo.getExemplo(), tipo.getIdExemplo(),
                 tipo.getDataCadastro(), tipo.getUsuarioValidacao(), tipo.getDataValidacao());
     }
 }

@@ -26,7 +26,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
- * PRO_CODMSG / PEN_CODMSG: o tipo do erro (responsabilidade 2/3) acompanha a mensagem nos POSTs, e o
+ * PRO_CODMSG / PEN_CODMSG: o tipo do erro (responsabilidade 0 a 4) acompanha a mensagem nos POSTs, e o
  * PATCH .../tipo-erro liga o tipo sem contar tentativa.
  */
 @ExtendWith(MockitoExtension.class)

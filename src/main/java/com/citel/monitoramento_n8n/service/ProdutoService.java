@@ -169,7 +169,8 @@ public class ProdutoService {
      * As duas pontas do filtro de tentativas são exclusivas e opcionais: {@code tentativaMaiorQue = 5}
      * traz quem tem 6 ou mais, {@code tentativaMenorQue = 5} traz quem tem 4 ou menos, as duas
      * juntas delimitam uma faixa e nenhuma delas = sem filtro. O período filtra a data do erro
-     * (PRO_DTAERR) e as duas pontas são inclusivas e opcionais.
+     * (PRO_DTAERR) e as duas pontas são inclusivas e opcionais. {@code responsabilidades} filtra pela
+     * responsabilidade do tipo do erro (0 a 4; erro sem tipo vale 0); nulo ou vazio = todas.
      *
      * <p>Ordena pela data do erro e desempata pelo id, para que registros com o mesmo instante não
      * troquem de página entre uma consulta e a seguinte. A página começa em 1; uma página além da
@@ -179,10 +180,13 @@ public class ProdutoService {
                                                Integer tentativaMaiorQue, Integer tentativaMenorQue,
                                                LocalDateTime dataInicial, LocalDateTime dataFinal,
                                                String plataforma, String produtoContem, String erroContem,
+                                               List<Integer> responsabilidades,
                                                int pagina, int tamanho, String ordem) {
         // Recusar um status fora de 0/1 é melhor que devolver lista vazia, que se confunde com
         // "não há produtos nesse status".
         validarStatus(status);
+        // Sem o parâmetro vale a lista inteira (0 a 4); fora de 0 a 4 é recusado.
+        List<Integer> responsabilidadesFiltro = ResponsabilidadeErro.validar(responsabilidades);
         // Com as duas pontas exclusivas, precisa sobrar pelo menos um inteiro no meio: menorQue
         // tem de ser no mínimo maiorQue + 2. Recusar é melhor que devolver lista vazia, que se
         // confunde com "não há produtos nessa faixa".
@@ -219,7 +223,7 @@ public class ProdutoService {
         PaginaDTO<Produto> resultado = PaginaDTO.de(repository.buscar(status, codigoProduto, cliente, idIntegracao,
                 tentativaMaiorQue, tentativaMenorQue, paraData(dataInicial), paraData(dataFinal),
                 StringUtils.hasText(plataforma) ? plataforma : null,
-                paraPadraoLike(produtoContem), paraPadraoLike(erroContem), pageable));
+                paraPadraoLike(produtoContem), paraPadraoLike(erroContem), responsabilidadesFiltro, pageable));
         return todos
                 ? new PaginaDTO<>(resultado.itens(), 1, TAMANHO_TODOS, resultado.totalItens(), resultado.totalPaginas())
                 : resultado;
@@ -244,14 +248,19 @@ public class ProdutoService {
      * <p>Os dois filtros se restringem um ao outro: com {@code plataforma}, os clientes são só os que
      * têm produto nela; com {@code cliente}, as plataformas são só as em que ele tem produto. Cada
      * lista ignora o próprio filtro, para a escolha atual não esconder as demais opções.
+     *
+     * <p>{@code responsabilidades} (0 a 4; nulo ou vazio = todas) restringe às opções de quem tem produto
+     * com erro dessas responsabilidades: sem isso a tela de uma visão listaria clientes que nela não têm nada.
      */
-    public FiltrosProdutosDTO retornarFiltros(int status, String cliente, String plataforma) {
+    public FiltrosProdutosDTO retornarFiltros(int status, String cliente, String plataforma,
+                                              List<Integer> responsabilidades) {
         validarStatus(status);
+        List<Integer> responsabilidadesFiltro = ResponsabilidadeErro.validar(responsabilidades);
         String clienteEscolhido = StringUtils.hasText(cliente) ? cliente : null;
         String plataformaEscolhida = StringUtils.hasText(plataforma) ? plataforma : null;
         return new FiltrosProdutosDTO(
-                repository.clientesComProduto(status, plataformaEscolhida),
-                repository.plataformasComProduto(status, clienteEscolhido));
+                repository.clientesComProduto(status, plataformaEscolhida, responsabilidadesFiltro),
+                repository.plataformasComProduto(status, clienteEscolhido, responsabilidadesFiltro));
     }
 
     /** "desc" (padrão, mais recente primeiro) ou "asc" (mais antigo primeiro), sem distinguir caixa. */

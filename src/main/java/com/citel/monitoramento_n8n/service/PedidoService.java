@@ -2,6 +2,7 @@ package com.citel.monitoramento_n8n.service;
 
 import com.citel.monitoramento_n8n.DTO.PedidoDTO;
 import com.citel.monitoramento_n8n.DTO.PedidoLoteDTO;
+import com.citel.monitoramento_n8n.exception.BusinessException;
 import com.citel.monitoramento_n8n.exception.ConflictException;
 import com.citel.monitoramento_n8n.exception.NotFoundException;
 import com.citel.monitoramento_n8n.model.Pedido;
@@ -143,8 +144,11 @@ public class PedidoService {
         return repository.save(pedido);
     }
 
+    /** {@code responsabilidades}: 0 a 4 (pedido sem tipo vale 0); nulo ou vazio = todas. */
     public List<Pedido> retornarPedidos(List<Integer> status, String cliente, String codigoPedido,
-                                        String idIntegracao, LocalDate data) {
+                                        String idIntegracao, LocalDate data, List<Integer> responsabilidades) {
+        // Sem o parâmetro vale a lista inteira (0 a 4); fora de 0 a 4 é recusado.
+        List<Integer> responsabilidadesFiltro = ResponsabilidadeErro.validar(responsabilidades);
         List<Integer> statusFiltro = status == null
                 ? List.of()
                 : status.stream().filter(Objects::nonNull).distinct().toList();
@@ -162,7 +166,8 @@ public class PedidoService {
                 normalizar(cliente),
                 normalizar(codigoPedido),
                 normalizar(idIntegracao),
-                data);
+                data,
+                responsabilidadesFiltro);
     }
 
     /** Query param em branco (?cliente=) vale como ausente, e não como "cliente igual a vazio". */

@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 public record ValidacaoTipoErroDTO(
 
-        @Schema(example = "2", description = "Novo status (2 ou 3). Omitir para só confirmar o atual.")
+        @Schema(example = "2", description = "Novo status (0 a 4, o STA_CODIGO da STAERR). Omitir para só confirmar o atual.")
         Integer status
 ) {
 }

@@ -7,8 +7,9 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 
 /**
- * Status de responsabilidade do erro (STAERR): 2 = erro da integração (culpa nossa),
- * 3 = não é culpa nossa (cliente ou plataforma). Só leitura: os valores entram por script.
+ * Status de responsabilidade do erro (STAERR): 0 = não informado, 1 = culpa nossa (integração),
+ * 2 = culpa do cliente, 3 = instabilidade (passageira), 4 = culpa da plataforma externa.
+ * Só leitura: os valores entram por script.
  *
  * Não confundir com PEN_STATUS (0 PENDENTE, 1 INTEGRA, 2 ERRO, 3 FINALIZADO) nem com PRO_STATUS.
  */

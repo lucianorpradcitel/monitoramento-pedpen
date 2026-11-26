@@ -90,7 +90,7 @@ public class SecurityConfigurations {
                     // requisição sem login levam 403, também pelo Swagger/Postman.
                     req.requestMatchers(HttpMethod.PATCH, "/pedidos/*/reprocessar").hasRole("INTERNO");
 
-                    // Tipos de erro 2/3 (CADMSG). O GET fica no anyRequest().authenticated(): o n8n consulta
+                    // Tipos de erro (CADERR). O GET fica no anyRequest().authenticated(): o n8n consulta
                     // antes de chamar a IA e o portal lista a fila de validação. O POST é do n8n (lojista),
                     // que grava a decisão da IA, e do ADM, que cadastra à mão. Validar e reclassificar é do
                     // time (DEV, e o ADM, que tem ROLE_DEV), sem o LOJISTA: o 3 diz ao cliente "a culpa é sua",
@@ -98,7 +98,7 @@ public class SecurityConfigurations {
                     req.requestMatchers(HttpMethod.POST, "/tipos-erro").hasAnyRole("LOJISTA", "ADMIN");
                     req.requestMatchers(HttpMethod.PATCH, "/tipos-erro/*").hasRole("DEV");
 
-                    // Ligar o erro ao tipo (responsabilidade 2/3): é o n8n que faz, depois de gravar o erro e
+                    // Ligar o erro ao tipo (responsabilidade 0 a 4): é o n8n que faz, depois de gravar o erro e
                     // classificar. Mesma regra do registro de erros, só lojista; usuário interno leva 403.
                     req.requestMatchers(HttpMethod.PATCH, "/produtos/*/tipo-erro", "/pedidos/*/tipo-erro")
                             .hasRole("LOJISTA");
